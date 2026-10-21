@@ -23,6 +23,11 @@ def _load_dotenv() -> None:
 _load_dotenv()
 
 
+def _with_scheme(value: str) -> str:
+    # PaaS hosts (e.g. Render's fromService host) may provide a bare hostname.
+    return value if "://" in value else f"https://{value}"
+
+
 def _list(name: str, default: str) -> list[str]:
     return [v.strip() for v in os.environ.get(name, default).split(",") if v.strip()]
 
@@ -45,9 +50,9 @@ class Settings:
     database_url: str = field(default_factory=_database_url)
     jwt_secret: str = os.environ.get("JWT_SECRET", "dev-only-insecure-secret-change-me-0000000000")
     jwt_expiry_minutes: int = int(os.environ.get("JWT_EXPIRY_MINUTES", "720"))
-    cors_origins: list[str] = field(default_factory=lambda: _list("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"))
+    cors_origins: list[str] = field(default_factory=lambda: [_with_scheme(o) for o in _list("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")])
     # Base URL printed under QR labels and encoded in opaque inventory URLs.
-    public_base_url: str = os.environ.get("PUBLIC_BASE_URL", "http://localhost:3000")
+    public_base_url: str = _with_scheme(os.environ.get("PUBLIC_BASE_URL", "http://localhost:3000"))
     upload_dir: Path = Path(os.environ.get("UPLOAD_DIR", str(BASE_DIR / "storage")))
 
     @property
