@@ -10,12 +10,15 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from .api import auth, dashboard, imports, items, machines, masters, process, production, sales_orders, sales_purchase, stock  # noqa: F401 (sales_orders registers routes)
+from .bootstrap import bootstrap
 from .config import settings
 from .db import engine
 from .services.common import BusinessError
 
 logging.basicConfig(level=logging.INFO, format='{"t":"%(asctime)s","lvl":"%(levelname)s","msg":%(message)s}')
 log = logging.getLogger("erp")
+
+bootstrap()  # no-op locally; on Vercel migrates the DB and creates the first admin if there are no users
 
 app = FastAPI(
     title="Lakshmi Machine ERP API",
