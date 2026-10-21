@@ -9,3 +9,5 @@ web/.env.local
 mobile/node_modules/
 mobile/.expo/
 node_modules/
+.vercel/
+VERCEL_ADMIN_LOGIN.txt

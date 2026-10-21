@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 
 from sqlalchemy import create_engine, event
+from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import settings
@@ -16,6 +18,9 @@ def make_engine(url: str):
     kwargs: dict = {"future": True, "pool_pre_ping": True}
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False, "timeout": 30}
+    elif os.environ.get("VERCEL"):
+        # Serverless: each invocation may run in a fresh instance – don't hold pooled connections open.
+        kwargs["poolclass"] = NullPool
     engine = create_engine(url, **kwargs)
     if url.startswith("sqlite"):
 

@@ -28,6 +28,9 @@ def _list(name: str, default: str) -> list[str]:
 
 
 def _database_url() -> str:
+    if os.environ.get("VERCEL") and not os.environ.get("DATABASE_URL"):
+        # Vercel's filesystem is read-only and the SQLite file is not deployed – a hosted Postgres is required.
+        raise RuntimeError("DATABASE_URL is not set. On Vercel, attach a Postgres database (e.g. Neon) and set DATABASE_URL.")
     url = os.environ.get("DATABASE_URL", f"sqlite:///{(BASE_DIR / 'lakshmi_erp.db').as_posix()}")
     # Hosted providers (Neon, Vercel Postgres, Heroku) hand out postgres:// URLs; route them to the installed psycopg 3 driver.
     for prefix in ("postgres://", "postgresql://"):
