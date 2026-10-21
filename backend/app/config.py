@@ -52,7 +52,8 @@ class Settings:
     jwt_expiry_minutes: int = int(os.environ.get("JWT_EXPIRY_MINUTES", "720"))
     cors_origins: list[str] = field(default_factory=lambda: [_with_scheme(o) for o in _list("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")])
     # Base URL printed under QR labels and encoded in opaque inventory URLs.
-    public_base_url: str = _with_scheme(os.environ.get("PUBLIC_BASE_URL", "http://localhost:3000"))
+    # On Vercel Services the web app shares the API's domain, so fall back to the project's production domain.
+    public_base_url: str = _with_scheme(os.environ.get("PUBLIC_BASE_URL") or os.environ.get("VERCEL_PROJECT_PRODUCTION_URL") or "http://localhost:3000")
     upload_dir: Path = Path(os.environ.get("UPLOAD_DIR", str(BASE_DIR / "storage")))
 
     @property

@@ -1,6 +1,4 @@
-web/
 mobile/
-docs/
 backend/tests/
 backend/.env
 backend/.env.local
@@ -12,3 +10,6 @@ backend/.claude/
 **/__pycache__/
 **/.pytest_cache/
 VERCEL_ADMIN_LOGIN.txt
+web/node_modules/
+web/.next/
+web/.env.local

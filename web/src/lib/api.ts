@@ -1,6 +1,8 @@
-const RAW_API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
+// Unset or empty = same origin: on Vercel Services the API is served from this domain under /api.
+// Local two-server dev sets NEXT_PUBLIC_API_URL=http://localhost:8000 in .env.local.
+const RAW_API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
 // Render passes a bare hostname (fromService host) – default it to https.
-export const API_URL = /^https?:\/\//.test(RAW_API_URL) ? RAW_API_URL : `https://${RAW_API_URL}`;
+export const API_URL = !RAW_API_URL || /^https?:\/\//.test(RAW_API_URL) ? RAW_API_URL : `https://${RAW_API_URL}`;
 const TOKEN_KEY = "lm_erp_token";
 
 export function getToken(): string | null {

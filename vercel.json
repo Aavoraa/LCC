@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "lcc-api": {
+      "root": "backend",
+      "framework": "fastapi",
+      "entrypoint": "app.main:app"
+    },
+    "lcc-web": {
+      "root": "web",
+      "framework": "nextjs"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "lcc-api" } },
+    { "source": "/health", "destination": { "service": "lcc-api" } },
+    { "source": "/docs", "destination": { "service": "lcc-api" } },
+    { "source": "/openapi.json", "destination": { "service": "lcc-api" } },
+    { "source": "/(.*)", "destination": { "service": "lcc-web" } }
+  ]
+}
