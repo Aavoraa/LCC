@@ -27,10 +27,19 @@ def _list(name: str, default: str) -> list[str]:
     return [v.strip() for v in os.environ.get(name, default).split(",") if v.strip()]
 
 
+def _database_url() -> str:
+    url = os.environ.get("DATABASE_URL", f"sqlite:///{(BASE_DIR / 'lakshmi_erp.db').as_posix()}")
+    # Hosted providers (Neon, Vercel Postgres, Heroku) hand out postgres:// URLs; route them to the installed psycopg 3 driver.
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
 @dataclass(frozen=True)
 class Settings:
     env: str = os.environ.get("APP_ENV", "development")
-    database_url: str = os.environ.get("DATABASE_URL", f"sqlite:///{(BASE_DIR / 'lakshmi_erp.db').as_posix()}")
+    database_url: str = field(default_factory=_database_url)
     jwt_secret: str = os.environ.get("JWT_SECRET", "dev-only-insecure-secret-change-me-0000000000")
     jwt_expiry_minutes: int = int(os.environ.get("JWT_EXPIRY_MINUTES", "720"))
     cors_origins: list[str] = field(default_factory=lambda: _list("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"))
