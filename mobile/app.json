@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "LM Stores",
+    "slug": "lakshmi-erp-stores",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.lakshmimachine.stores",
+      "permissions": ["android.permission.CAMERA"],
+      "adaptiveIcon": { "backgroundColor": "#0b1a3a" }
+    },
+    "plugins": [["expo-camera", { "cameraPermission": "Allow LM Stores to scan inventory QR labels." }]],
+    "extra": { "apiUrl": "http://10.0.2.2:8000" }
+  }
+}

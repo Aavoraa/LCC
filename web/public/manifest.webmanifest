@@ -1,0 +1,9 @@
+{
+  "name": "Lakshmi Machine ERP",
+  "short_name": "LM Stores",
+  "start_url": "/scan",
+  "display": "standalone",
+  "background_color": "#0b1a3a",
+  "theme_color": "#0b1a3a",
+  "icons": []
+}

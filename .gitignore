@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/.env
+backend/*.db
+backend/*.db-*
+backend/storage/
+web/.env.local
+mobile/node_modules/
+mobile/.expo/
+node_modules/

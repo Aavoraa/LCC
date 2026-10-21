@@ -1,0 +1,150 @@
+LAKSHMI MACHINE ERP - HOW TO RUN
+================================
+
+REQUIREMENTS
+------------
+- Python 3.12 or newer   (check: python --version)
+- Node.js 20 or newer    (check: node --version)
+- Android only: Expo Go app on the phone, or an Android emulator
+
+
+FIRST-TIME SETUP (do once)
+--------------------------
+Open a terminal in the "lakshmi machine" folder.
+
+1) Backend (API)
+   cd backend
+   python -m pip install -r requirements.txt
+   copy .env.example .env
+   python -m alembic upgrade head
+   python -m app.seed --demo
+   cd ..
+
+   - "alembic upgrade head" creates the database tables.
+   - "app.seed --demo" creates roles, stores locations, the admin user,
+     one demo user per role, and a few demo items.
+     Leave out "--demo" for a clean system (admin user only).
+
+2) Web app
+   cd web
+   npm install
+   copy .env.local.example .env.local
+   cd ..
+
+
+START THE SYSTEM (every time)
+-----------------------------
+Use TWO terminals, both opened in the "lakshmi machine" folder.
+
+Terminal 1 - API:
+   cd backend
+   python -m uvicorn app.main:app --reload --port 8000
+
+Terminal 2 - Web app:
+   cd web
+   npm run dev
+
+Then open in a browser:
+   Web app ........ http://localhost:3000
+   API docs ....... http://localhost:8000/docs
+   Health check ... http://localhost:8000/health
+
+Stop either one with Ctrl+C.
+
+
+LOGIN
+-----
+Username: admin   (full access)
+
+Demo users (created by "--demo"):
+   stores, stores2, sales, purchase, qc, manager,
+   accounts, finance, auditor, planning, production
+
+Password for all of them: the SEED_PASSWORD value in backend\.env
+(default: ChangeMe@123). Change it before anyone else uses the system.
+
+Tip: maker-checker rules mean some approvals need a DIFFERENT user,
+e.g. "stores" requests a stock adjustment, "manager" approves it.
+
+
+ANDROID APP (optional)
+----------------------
+   cd mobile
+   npm install
+   npx expo start --android
+
+- Android emulator: server URL http://10.0.2.2:8000 (the default).
+- Real phone: on the login screen set the server URL to
+  http://<your-PC-LAN-IP>:8000  (find it with: ipconfig)
+  and start the API with --host 0.0.0.0 so the phone can reach it:
+     python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+- Without the app: open the web app's "Scan & transact" page in
+  Android Chrome. The camera needs HTTPS or localhost.
+
+
+LOAD 1000 DEMO PRODUCTS (optional)
+----------------------------------
+After "app.seed --demo":
+   cd backend
+   python -m app.demo_catalog
+
+Tops the item master up to 1000 products (bearings, fasteners, steel,
+consumables, electrical, hydraulics, textile-machine spares, machines),
+each with a QR code and opening stock posted to the ledger.
+Want more?  python -m app.demo_catalog --target 1016   (catalogue max)
+Safe to run again - existing products are skipped.
+
+
+LOAD THE CARD SERVICE MACHINES + SOP SPARE LISTS
+-----------------------------------------------
+   cd backend
+   python -m alembic upgrade head
+   python -m app.machine_catalog --align --create-missing
+
+Loads the 10 machines (plus common accessories) from the LCC "Card
+Service Machines" catalogue with their SOP spare lists, links each
+spare to the stores item with the same name, and creates the missing
+spares as new stores items (zero stock). Leave out --create-missing to
+only link. Safe to run again. Then open "Machines & SOP Spares" in the
+web app to review spares, adjust SOP stock, run the Stores check and
+raise purchase requisitions for shortages.
+
+
+RUN THE TESTS
+-------------
+   cd backend
+   python -m pytest -q -p no:logging
+
+
+RESET THE DATABASE (start over)
+-------------------------------
+Stop the API first, then:
+   cd backend
+   del lakshmi_erp.db
+   python -m alembic upgrade head
+   python -m app.seed --demo
+
+
+TROUBLESHOOTING
+---------------
+- "Cannot reach the server" in the web app
+    -> The API (Terminal 1) is not running, or is not on port 8000.
+- Port already in use
+    -> Another copy is running. Close it, or use another port
+       (if you change the API port, update web\.env.local).
+- Login fails after resetting the database
+    -> Run "python -m app.seed --demo" again.
+- "python" not found on Windows
+    -> Try "py" instead of "python".
+
+
+PRODUCTION (summary)
+--------------------
+In backend\.env set:
+   APP_ENV=production
+   JWT_SECRET=<long random string>
+   DATABASE_URL=postgresql+psycopg://user:password@host:5432/lakshmi_erp
+   CORS_ORIGINS=https://your-web-domain
+   PUBLIC_BASE_URL=https://your-web-domain
+Run "python -m alembic upgrade head" on each deploy, serve over HTTPS,
+and back up the PostgreSQL database daily.
