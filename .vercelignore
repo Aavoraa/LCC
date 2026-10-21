@@ -1,0 +1,14 @@
+web/
+mobile/
+docs/
+backend/tests/
+backend/.env
+backend/.env.local
+backend/*.db
+backend/*.db-*
+backend/storage/
+backend/.agents/
+backend/.claude/
+**/__pycache__/
+**/.pytest_cache/
+VERCEL_ADMIN_LOGIN.txt
