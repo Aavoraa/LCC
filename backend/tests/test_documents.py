@@ -150,3 +150,24 @@ def test_failed_extraction_kept_for_manual_entry_and_upload_rules(as_user, monke
     assert _upload(as_user("sales")).status_code == 403
     cfg = ok(stores.get("/api/documents/config"))
     assert {t["code"] for t in cfg["doc_types"]} == {"SUPPLIER_INVOICE", "DELIVERY_CHALLAN", "PRODUCTION_REPORT", "OTHER"}
+
+
+def test_sample_data_loader_runs_in_steps_and_only_on_a_fresh_system(as_user, monkeypatch):
+    import app.api.sample_data as sd
+
+    monkeypatch.setattr(sd, "TARGET_ITEMS", 120)
+    monkeypatch.setattr(sd, "BATCH", 60)
+    monkeypatch.setenv("EXTRACTION_PROVIDER", "none")
+    admin = as_user("admin")
+    assert as_user("manager").post("/api/admin/sample-data", json={"step": "base", "password": "Demo-pass-123"}).status_code == 403
+    assert admin.post("/api/admin/sample-data", json={"step": "base"}).status_code == 422  # demo users need a password
+    ok(admin.post("/api/admin/sample-data", json={"step": "base", "password": "Demo-pass-123"}))
+    while ok(admin.get("/api/admin/sample-data"))["items"] < 120:
+        assert ok(admin.post("/api/admin/sample-data", json={"step": "catalog"}))["result"]["added"] > 0
+    ok(admin.post("/api/admin/sample-data", json={"step": "machines"}))
+    res = ok(admin.post("/api/admin/sample-data", json={"step": "activity"}))
+    st = res["status"]
+    assert st["purchase_orders"] == 7 and st["sales_orders"] >= 3 and st["machines"] >= 10 and not st["can_load"]
+    assert ok(admin.get("/api/stock/reconcile"))["balanced"]
+    # Once there are transactions, nothing more is loaded.
+    assert admin.post("/api/admin/sample-data", json={"step": "catalog"}).status_code == 409

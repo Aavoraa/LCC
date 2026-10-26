@@ -59,6 +59,7 @@ export default function SettingsPage() {
           )}
         </Card>
         <CompanyCard editable={can("users.manage")} />
+        {can("users.manage") && <SampleDataCard />}
         <Card className="overflow-hidden xl:col-span-2">
           <CardHeader title="Role permissions" />
           {!roles.data ? <Spinner /> : (
@@ -75,6 +76,74 @@ export default function SettingsPage() {
       </div>
       {newUser && <NewUser roles={roles.data ?? []} onClose={() => setNewUser(false)} onDone={users.reload} />}
     </>
+  );
+}
+
+interface SampleStatus { items: number; purchase_orders: number; sales_orders: number; machines: number; demo_users: number; target_items: number; can_load: boolean }
+
+function SampleDataCard() {
+  const st = useApi<SampleStatus>("/api/admin/sample-data");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [log, setLog] = useState<string[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const add = (line: string) => setLog((l) => [...l, line]);
+
+  async function load() {
+    if (!confirm("Load the full sample data (1,000 products, machines, purchases, sales, production, challans, counts and documents) into this system?")) return;
+    setBusy(true); setErr(null); setLog([]);
+    type Res = { result: Record<string, number>; status: SampleStatus };
+    const step = (s: string, extra: Record<string, unknown> = {}) => api<Res>("/api/admin/sample-data", { method: "POST", json: { step: s, ...extra } });
+    try {
+      add("Roles, locations, demo users, suppliers and customers…");
+      let r = await step("base", { password });
+      add("Product catalogue with QR codes and opening stock…");
+      while (r.status.items < r.status.target_items) {
+        r = await step("catalog");
+        add(`  ${r.status.items} / ${r.status.target_items} products`);
+        if (!r.result.added) break;
+      }
+      add("Card service machines and SOP spare lists…");
+      r = await step("machines");
+      add("Purchases, sales, production, job-work challans, cycle counts and documents…");
+      r = await step("activity");
+      add(`Done: ${Object.entries(r.result).map(([k, v]) => `${v} ${k}`).join(", ")}.`);
+      st.reload();
+    } catch (e) {
+      setErr((e as ApiError).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const s = st.data;
+  return (
+    <Card className="overflow-hidden xl:col-span-2">
+      <CardHeader title="Sample data" subtitle="Fill a fresh system with realistic demo data for training and demonstrations" />
+      {!s ? <Spinner /> : (
+        <div className="space-y-3 p-4 text-sm">
+          <p className="text-muted">Now: {s.items} products · {s.machines} machines · {s.purchase_orders} purchase orders · {s.sales_orders} sales orders</p>
+          {!s.can_load && log.length === 0 ? (
+            <Alert tone="info">This system already has purchase orders, so sample data can&apos;t be loaded — it only goes into a fresh system, never into live records.</Alert>
+          ) : (
+            <>
+              <p>Adds 1,000 products with QR codes and opening stock, 10 card service machines with SOP spares, suppliers and customers, and three
+                weeks of activity: purchase orders and goods receipts, sales orders, work orders with completions, job-work challans, cycle counts
+                and scanned documents. It also creates one demo user per role (stores, stores2, purchase, sales, qc, manager, finance, accounts,
+                auditor, planning, production) with the password you choose here.</p>
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label="Password for the demo users" hint="At least 10 characters — share it only with people testing the system" className="w-72">
+                  <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={busy || !s.can_load} />
+                </Field>
+                <Button loading={busy} disabled={password.length < 10 || !s.can_load} onClick={load}>Load sample data</Button>
+              </div>
+            </>
+          )}
+          {err && <Alert>{err}</Alert>}
+          {log.length > 0 && <pre className="max-h-48 overflow-auto rounded bg-surface-2 p-3 text-xs text-ink-2">{log.join("\n")}</pre>}
+        </div>
+      )}
+    </Card>
   );
 }
 

@@ -180,74 +180,80 @@ def _catalogue() -> list[dict]:
     return out
 
 
+def add_items(db, user: User, target: int = 1000, *, limit: int | None = None, verbose: bool = False) -> int:
+    """Top the item master up to ``target`` items (at most ``limit`` in this call); returns how many were added.
+    Deterministic per remaining set, and safe to call repeatedly in batches."""
+    rng = random.Random(20261016)
+    existing = db.scalar(select(func.count()).select_from(Item)) or 0
+    need = target - existing
+    if need <= 0:
+        return 0
+    if limit is not None:
+        need = min(need, limit)
+    names = set(db.scalars(select(Item.name_normalized)))
+    uoms = {u.code: u.id for u in db.scalars(select(Uom))}
+    cats = {c.name: c.id for c in db.scalars(select(ItemCategory).where(ItemCategory.parent_id.is_(None)))}
+    locs = [l.id for l in db.scalars(select(Location).where(Location.code.like("MAIN-R%")))]
+    suppliers = list(db.scalars(select(Supplier)))
+
+    catalogue = [c for c in _catalogue() if normalize_name(c["name"]) not in names]
+    rng.shuffle(catalogue)
+    created = 0
+    for spec in catalogue[:need]:
+        low, high = spec.pop("cost")
+        uom_code, cat_name = spec.pop("uom"), spec.pop("category")
+        cost = Decimal(str(round(rng.uniform(low, high), 2)))
+        reorder = Decimal(rng.choice([0, 5, 10, 20, 25, 50, 100]) if uom_code != "KG" else rng.choice([100, 200, 500]))
+        if spec["item_type"] == "FINISHED_GOOD":
+            reorder = Decimal(0)
+        data = {
+            **spec,
+            "uom_id": uoms[uom_code],
+            "category_id": cats.get(cat_name),
+            "gst_rate": Decimal(spec["gst_rate"]),
+            "reorder_level": reorder,
+            "min_stock": (reorder / 2).quantize(Decimal(1)),
+            "max_stock": reorder * 6 if reorder else Decimal(0),
+            "default_location_id": rng.choice(locs),
+            "supplier_id": rng.choice(suppliers).id if suppliers and spec["item_type"] in ("PURCHASED_ITEM", "RAW_MATERIAL") else None,
+            "description": "Demo catalogue item",
+        }
+        item = create_item(db, user, data, reviewed=True)
+
+        # Stock profile: ~8% out of stock, ~15% low, the rest healthy.
+        roll = rng.random()
+        if data["item_type"] == "FINISHED_GOOD":
+            qty = Decimal(rng.choice([0, 0, 1, 2]))
+        elif roll < 0.08:
+            qty = Decimal(0)
+        elif roll < 0.23 and reorder:
+            qty = Decimal(rng.randint(1, max(1, int(reorder))))
+        else:
+            qty = Decimal(rng.randint(int(reorder) + 1, int(reorder) * 5 + 40))
+        if qty > 0:
+            post_movement(db, user, MovementInput(
+                txn_uuid=f"demo-catalog-{item.id}", movement_type=MovementType.OPENING, item_id=item.id, quantity=qty,
+                to_location_id=data["default_location_id"], unit_cost=cost, ref_doc_type="OPENING", ref_doc_no="DEMO-CATALOG",
+                source="import",
+            ), _internal=True)
+        created += 1
+        if created % 100 == 0:
+            db.commit()
+            if verbose:
+                print(f"  {created} items…")
+    db.commit()
+    return created
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", type=int, default=1000, help="total number of items wanted in the item master")
     args = parser.parse_args()
-    rng = random.Random(20261016)
-
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.username == "stores")) or db.scalar(select(User).where(User.username == "admin"))
         if user is None:
             raise SystemExit("Run `python -m app.seed --demo` first.")
-        existing = db.scalar(select(func.count()).select_from(Item)) or 0
-        need = args.target - existing
-        if need <= 0:
-            print(f"Already {existing} items — nothing to add.")
-            return
-        names = set(db.scalars(select(Item.name_normalized)))
-        uoms = {u.code: u.id for u in db.scalars(select(Uom))}
-        cats = {c.name: c.id for c in db.scalars(select(ItemCategory).where(ItemCategory.parent_id.is_(None)))}
-        locs = [l.id for l in db.scalars(select(Location).where(Location.code.like("MAIN-R%")))]
-        suppliers = list(db.scalars(select(Supplier)))
-
-        catalogue = [c for c in _catalogue() if normalize_name(c["name"]) not in names]
-        rng.shuffle(catalogue)
-        if len(catalogue) < need:
-            print(f"Catalogue has {len(catalogue)} new names; adding all of them.")
-        created = 0
-        for spec in catalogue[:need]:
-            low, high = spec.pop("cost")
-            uom_code, cat_name = spec.pop("uom"), spec.pop("category")
-            cost = Decimal(str(round(rng.uniform(low, high), 2)))
-            reorder = Decimal(rng.choice([0, 5, 10, 20, 25, 50, 100]) if uom_code != "KG" else rng.choice([100, 200, 500]))
-            if spec["item_type"] == "FINISHED_GOOD":
-                reorder = Decimal(0)
-            data = {
-                **spec,
-                "uom_id": uoms[uom_code],
-                "category_id": cats.get(cat_name),
-                "gst_rate": Decimal(spec["gst_rate"]),
-                "reorder_level": reorder,
-                "min_stock": (reorder / 2).quantize(Decimal(1)),
-                "max_stock": reorder * 6 if reorder else Decimal(0),
-                "default_location_id": rng.choice(locs),
-                "supplier_id": rng.choice(suppliers).id if suppliers and spec["item_type"] in ("PURCHASED_ITEM", "RAW_MATERIAL") else None,
-                "description": "Demo catalogue item",
-            }
-            item = create_item(db, user, data, reviewed=True)
-
-            # Stock profile: ~8% out of stock, ~15% low, the rest healthy.
-            roll = rng.random()
-            if data["item_type"] == "FINISHED_GOOD":
-                qty = Decimal(rng.choice([0, 0, 1, 2]))
-            elif roll < 0.08:
-                qty = Decimal(0)
-            elif roll < 0.23 and reorder:
-                qty = Decimal(rng.randint(1, max(1, int(reorder))))
-            else:
-                qty = Decimal(rng.randint(int(reorder) + 1, int(reorder) * 5 + 40))
-            if qty > 0:
-                post_movement(db, user, MovementInput(
-                    txn_uuid=f"demo-catalog-{item.id}", movement_type=MovementType.OPENING, item_id=item.id, quantity=qty,
-                    to_location_id=data["default_location_id"], unit_cost=cost, ref_doc_type="OPENING", ref_doc_no="DEMO-CATALOG",
-                    source="import",
-                ), _internal=True)
-            created += 1
-            if created % 100 == 0:
-                db.commit()
-                print(f"  {created} items…")
-        db.commit()
+        created = add_items(db, user, args.target, verbose=True)
         total = db.scalar(select(func.count()).select_from(Item))
         print(f"Added {created} demo items. Item master now has {total} items.")
 
