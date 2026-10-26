@@ -220,20 +220,23 @@ function History({ itemId, lang }: { itemId: number; lang: Lang }) {
                 {item.default_location && <p className="mt-1">Assigned location: <span className="font-mono font-semibold">{item.default_location.code}</span></p>}
               </div>
             )}
-            {stocked.map((b) => (
-              <div key={b.location.id} className="flex items-center gap-3 rounded-lg border border-line p-3">
-                <MapPin className="size-5 shrink-0 text-primary" />
+            {stocked.map((b, i) => (
+              <div key={b.location.id} className={cx("flex items-center gap-3.5 rounded-xl p-3.5", i === 0 ? "bg-navy text-white" : "border border-line")}>
+                <span className={cx("grid size-11 shrink-0 place-items-center rounded-xl", i === 0 ? "bg-white/10" : "bg-primary-soft text-primary")}>
+                  <MapPin className="size-5" aria-hidden />
+                </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-base font-semibold text-ink">{b.location.code}</p>
-                  <p className="text-xs text-muted">
+                  {i === 0 && <p className="text-xs font-semibold text-navy-text">Find it at</p>}
+                  <p className={cx("font-mono font-semibold", i === 0 ? "text-xl" : "text-base text-ink")}>{b.location.code}</p>
+                  <p className={cx("text-xs", i === 0 ? "text-navy-text" : "text-muted")}>
                     {b.location.warehouse.name} · Rack {b.location.rack} · Bin {b.location.bin}
                     {item.default_location?.id === b.location.id && " · default"}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="tabular text-lg font-semibold text-success">{qty(b.qty_available)} <span className="text-xs font-normal text-muted">{uom}</span></p>
-                  <p className="tabular text-[11px] text-muted">
-                    on hand {qty(b.qty_on_hand)}{Number(b.qty_reserved) > 0 && ` · reserved ${qty(b.qty_reserved)}`}{Number(b.qty_qc_hold) > 0 && ` · QC ${qty(b.qty_qc_hold)}`}
+                  <p className={cx("tabular font-extrabold leading-none", i === 0 ? "text-3xl" : "text-lg text-success")}>{qty(b.qty_available)}</p>
+                  <p className={cx("tabular mt-1 text-[11px]", i === 0 ? "font-semibold text-navy-text" : "text-muted")}>
+                    {uom} free · on hand {qty(b.qty_on_hand)}{Number(b.qty_reserved) > 0 && ` · reserved ${qty(b.qty_reserved)}`}{Number(b.qty_qc_hold) > 0 && ` · QC ${qty(b.qty_qc_hold)}`}
                   </p>
                 </div>
               </div>

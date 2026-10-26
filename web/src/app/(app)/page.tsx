@@ -1,15 +1,14 @@
 "use client";
 
-import { AlertTriangle, Boxes, ClipboardCheck, PackageX, RefreshCw, ShoppingCart, Sparkles, Wallet } from "lucide-react";
+import { AlertTriangle, Boxes, CalendarDays, ClipboardList, FileText, IndianRupee, Plus, RefreshCw, ShoppingCart, TrendingUp, Truck } from "lucide-react";
 import Link from "next/link";
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, PageHeader, Skeleton, Stat, Td, Th, cx } from "@/components/ui";
 import { MovementBadge } from "@/components/MovementBadge";
 import { useAuth } from "@/lib/auth";
 import { compactMoney, dateFmt, dateTime, isInbound, isOutbound, qty } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
-import { itemTypeLabel, type Movement } from "@/lib/types";
+import type { Movement } from "@/lib/types";
 
-interface NotBuilt { value: null; available: false; note: string }
 interface Summary {
   generated_at: string;
   inventory_valuation: string;
@@ -20,7 +19,6 @@ interface Summary {
   reserved_qty: string;
   qc_hold_qty: string;
   available_qty: string;
-  valuation_by_type: Record<string, string>;
   movements_14d: { date: string; in: number; out: number }[];
   recent_movements: Movement[];
   pending_adjustments: number;
@@ -29,66 +27,75 @@ interface Summary {
   purchase_orders_awaiting_approval: number;
   goods_pending_qc_qty: string;
   open_enquiries: number;
-  // Phase 5 fields: optional so the page still renders against an older API.
   orders_at_risk?: number;
   orders_at_risk_list?: { id: number; number: string; customer: string; forecast_date: string | null; target_date: string | null; target: "committed" | "required" }[];
   open_sales_orders?: number;
   pending_commit_approvals?: number;
   open_requisitions?: number;
-  work_in_progress: NotBuilt;
-  outside_processing_outstanding: NotBuilt;
-  accounts_receivable: NotBuilt;
-  accounts_payable: NotBuilt;
-  cash_and_bank: NotBuilt;
-  invoice_extraction_pending: NotBuilt;
 }
+interface Alerts {
+  out: AlertRow[]; below_min: AlertRow[]; out_count: number; below_min_count: number;
+}
+interface AlertRow { id: number; item_code: string; name: string; uom: string; location: string | null; available: string; restock_qty: string | null }
+interface WoBrief { id: number; number: string; status: string; qty_completed: string; current_step: { mode: string; status: string } | null }
+interface ChallanRow { id: number; number: string; supplier: { name: string }; expected_return_date: string | null; overdue: boolean }
 
 export default function DashboardPage() {
   const { user, can } = useAuth();
   const { data: raw, error, loading, reload } = useApi<Summary>(can("dashboard.view") ? "/api/dashboard/summary" : null, { pollMs: 15000 });
-
-  const data = raw && {
-    ...raw,
-    orders_at_risk: raw.orders_at_risk ?? 0,
-    orders_at_risk_list: raw.orders_at_risk_list ?? [],
-    open_sales_orders: raw.open_sales_orders ?? raw.open_enquiries,
-    pending_commit_approvals: raw.pending_commit_approvals ?? 0,
-    open_requisitions: raw.open_requisitions ?? 0,
-  };
+  const alerts = useApi<Alerts>(can("items.view") ? "/api/items/restock-alerts?limit=5" : null, { pollMs: 60000 });
+  const wos = useApi<WoBrief[]>(can("production.view") ? "/api/work-orders" : null, { pollMs: 60000 });
+  const atVendor = useApi<ChallanRow[]>(can("production.view") ? "/api/osp/challans?status=SENT" : null, { pollMs: 60000 });
+  const toReview = useApi<{ id: number }[]>(can("stock.view") ? "/api/documents?status=EXTRACTED" : null, { pollMs: 60000 });
 
   if (!can("dashboard.view")) return <EmptyState title="No dashboard access" description="Use the sidebar to open the modules assigned to your role." />;
   if (error) return <ErrorState error={error} onRetry={reload} />;
 
+  const d = raw && {
+    ...raw,
+    orders_at_risk: raw.orders_at_risk ?? 0,
+    orders_at_risk_list: raw.orders_at_risk_list ?? [],
+    open_sales_orders: raw.open_sales_orders ?? 0,
+    pending_commit_approvals: raw.pending_commit_approvals ?? 0,
+  };
+
   return (
     <>
       <PageHeader
-        title={`Good ${greeting()}, ${user?.full_name.split(" ")[0]}`}
-        description={data ? <>Live figures from the stock ledger · updated {dateTime(data.generated_at)}</> : "Loading live figures…"}
-        actions={<Button variant="secondary" icon={<RefreshCw className="size-4" />} onClick={reload}>Refresh</Button>}
+        title="Executive dashboard"
+        description={d ? <>Good {greeting()}, {user?.full_name.split(" ")[0]} · live from the stock ledger, updated {dateTime(d.generated_at)}</> : "Loading live figures…"}
+        actions={<>
+          <span className="hidden h-10 items-center gap-2 rounded-lg border border-line bg-surface px-3.5 text-[13px] font-semibold text-ink sm:inline-flex"><CalendarDays className="size-4" aria-hidden /> Last 14 days</span>
+          <Button variant="secondary" icon={<RefreshCw className="size-4" />} onClick={reload}>Refresh</Button>
+          {can("stock.receive", "stock.issue") && <Link href="/scan"><Button icon={<Plus className="size-4" />}>New transaction</Button></Link>}
+        </>}
       />
-      {loading || !data ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-[108px]" />)}</div>
+      {loading || !d ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[168px] rounded-2xl" />)}</div>
       ) : (
         <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Inventory valuation" value={compactMoney(data.inventory_valuation)} sub="Weighted average cost" icon={<Wallet className="size-4" />} tone="primary" />
-            <Stat label="Stock items" value={data.total_items} sub={`${qty(data.stock_on_hand_qty)} units on hand`} icon={<Boxes className="size-4" />} href="/inventory" />
-            <Stat label="Low stock" value={data.low_stock_items} sub="At or below reorder level" icon={<AlertTriangle className="size-4" />} tone="warning" href="/inventory?status=LOW" />
-            <Stat label="Out of stock" value={data.out_of_stock_items} sub="Zero on hand" icon={<PackageX className="size-4" />} tone="danger" href="/inventory?status=OUT" />
-            <Stat label="Open sales orders" value={data.open_sales_orders} sub={<>{data.orders_at_risk > 0 ? <span className="text-danger">{data.orders_at_risk} at risk of late delivery</span> : "None at risk"} · {data.open_enquiries} open enquiries</>} icon={<Sparkles className="size-4" />} tone={data.orders_at_risk > 0 ? "danger" : "info"} href="/sales" />
-            <Stat label="Open purchase orders" value={data.open_purchase_orders} sub={`${data.purchase_orders_awaiting_approval} awaiting approval · ${data.open_requisitions} requisitions open`} icon={<ShoppingCart className="size-4" />} href="/purchase" />
-            <Stat label="Goods pending QC" value={qty(data.goods_pending_qc_qty)} sub="Units on quality hold" icon={<ClipboardCheck className="size-4" />} tone="warning" href="/qc" />
-            <Stat label="Approvals pending" value={data.pending_adjustments + data.pending_import_approvals + data.pending_commit_approvals}
-                  sub={`${data.pending_adjustments} adjustments · ${data.pending_import_approvals} imports · ${data.pending_commit_approvals} delivery dates`} icon={<ClipboardCheck className="size-4" />} tone="primary" href="/stock/adjustments" />
-          </div>
+          <section aria-label="Key figures" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Stat label="Inventory value" value={compactMoney(d.inventory_valuation)} tone="primary" icon={<IndianRupee className="size-5" />}
+                  bar={Number(d.stock_on_hand_qty) ? Number(d.available_qty) / Number(d.stock_on_hand_qty) : 0}
+                  sub={<>{qty(d.available_qty)} of {qty(d.stock_on_hand_qty)} units free to use</>} />
+            <Stat label="Items in stores" value={d.total_items.toLocaleString("en-IN")} tone="accent" icon={<Boxes className="size-5" />} href="/inventory"
+                  bar={d.total_items ? (d.total_items - d.out_of_stock_items) / d.total_items : 0}
+                  sub={<><span className="font-bold text-danger">{d.out_of_stock_items} out of stock</span> · {d.low_stock_items} low</>} />
+            <Stat label="Open purchase orders" value={d.open_purchase_orders} tone="teal" icon={<ShoppingCart className="size-5" />} href="/purchase"
+                  bar={d.open_purchase_orders ? (d.open_purchase_orders - d.purchase_orders_awaiting_approval) / d.open_purchase_orders : 0}
+                  sub={<>{d.purchase_orders_awaiting_approval} awaiting approval · {raw?.open_requisitions ?? 0} requisitions open</>} />
+            <Stat label="Open sales orders" value={d.open_sales_orders} tone="violet" icon={<TrendingUp className="size-5" />} href="/sales"
+                  bar={d.open_sales_orders ? (d.open_sales_orders - d.orders_at_risk) / d.open_sales_orders : 0}
+                  sub={d.orders_at_risk > 0 ? <span className="font-bold text-danger">{d.orders_at_risk} at risk of late delivery</span> : <>None at risk · {d.open_enquiries} open enquiries</>} />
+          </section>
 
-          {data.orders_at_risk_list.length > 0 && (
+          {d.orders_at_risk_list.length > 0 && (
             <Card className="overflow-hidden border-danger/30">
               <CardHeader title={<span className="flex items-center gap-2 text-danger"><AlertTriangle className="size-4" /> Sales orders at risk</span>}
-                subtitle="Recalculated forecast is later than the committed or required date" actions={<Link href="/sales" className="text-xs font-medium text-primary hover:underline">Open sales</Link>} />
+                subtitle="Recalculated forecast is later than the committed or required date" actions={<Link href="/sales" className="text-[13px] font-semibold text-primary hover:underline">Open sales</Link>} />
               <ul className="divide-y divide-line text-sm">
-                {data.orders_at_risk_list.map((o) => (
-                  <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                {d.orders_at_risk_list.map((o) => (
+                  <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                     <span><span className="font-mono text-xs text-primary">{o.number}</span> · {o.customer}</span>
                     <span className="tabular text-xs text-muted">forecast <b className="text-danger">{dateFmt(o.forecast_date)}</b> vs {o.target} {dateFmt(o.target_date)}</span>
                   </li>
@@ -99,40 +106,38 @@ export default function DashboardPage() {
 
           <div className="grid gap-5 xl:grid-cols-3">
             <Card className="xl:col-span-2">
-              <CardHeader title="Stock movements — last 14 days" subtitle="Inbound vs outbound transactions per day" />
-              <MovementChart data={data.movements_14d} />
+              <CardHeader title="Stock movements" subtitle="Receipts and issues posted per day"
+                actions={<div className="flex gap-4 text-xs text-ink-2">
+                  <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-primary" /> Receipts</span>
+                  <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-accent" /> Issues</span>
+                </div>} />
+              <MovementChart data={d.movements_14d} />
             </Card>
-            <Card>
-              <CardHeader title="Available vs committed" subtitle="Units across all locations" />
-              <AvailabilityBar s={data} />
-              <div className="border-t border-line px-4 py-3">
-                <p className="mb-2 text-xs font-medium text-muted">Valuation by stream</p>
-                <TypeBars data={data.valuation_by_type} />
-              </div>
-            </Card>
+            <RestockCard alerts={alerts.data} />
           </div>
 
           <div className="grid gap-5 xl:grid-cols-3">
             <Card className="overflow-hidden xl:col-span-2">
-              <CardHeader title="Recent stock transactions" actions={<Link href="/stock/ledger" className="text-xs font-medium text-primary hover:underline">View ledger</Link>} />
-              {data.recent_movements.length === 0 ? (
+              <CardHeader title="Recent stock movements" actions={<Link href="/stock/ledger" className="text-[13px] font-semibold text-primary hover:underline">Stock ledger</Link>} />
+              {d.recent_movements.length === 0 ? (
                 <EmptyState title="No transactions yet" description="Scan an item to record the first receipt." action={<Link href="/scan"><Button>Open scanner</Button></Link>} />
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-[13px]">
-                    <thead><tr><Th>Txn</Th><Th>Item</Th><Th>Type</Th><Th className="text-right">Qty</Th><Th>Location</Th><Th>By</Th><Th>When</Th></tr></thead>
+                  <table className="w-full min-w-[640px] text-[13px]">
+                    <thead><tr><Th className="pl-5">Item</Th><Th>Type</Th><Th className="text-right">Qty</Th><Th>Reference</Th><Th className="pr-5">By</Th></tr></thead>
                     <tbody>
-                      {data.recent_movements.map((m) => (
-                        <tr key={m.id} className="h-10 hover:bg-surface-2">
-                          <Td className="font-mono text-xs">{m.number}</Td>
-                          <Td><Link href={`/inventory?item=${m.item_id}`} className="font-medium text-ink hover:text-primary">{m.item_code}</Link> <span className="text-muted">{m.item_name}</span></Td>
+                      {d.recent_movements.map((m) => (
+                        <tr key={m.id} className="hover:bg-surface-2">
+                          <Td className="py-2.5 pl-5">
+                            <Link href={`/locator?item=${m.item_id}`} className="block font-semibold text-ink hover:text-primary">{m.item_name}</Link>
+                            <span className="font-mono text-[11px] text-muted">{m.item_code}</span>
+                          </Td>
                           <Td><MovementBadge type={m.movement_type} /></Td>
-                          <Td className={cx("tabular text-right font-medium", isInbound(m.movement_type) ? "text-success" : isOutbound(m.movement_type) ? "text-danger" : "")}>
+                          <Td className={cx("tabular text-right font-bold", isInbound(m.movement_type) ? "text-success" : isOutbound(m.movement_type) ? "text-danger" : "text-ink")}>
                             {isInbound(m.movement_type) ? "+" : isOutbound(m.movement_type) ? "−" : ""}{qty(m.quantity)}
                           </Td>
-                          <Td className="text-xs">{m.to_location ?? m.from_location}</Td>
-                          <Td className="text-xs">{m.created_by}</Td>
-                          <Td className="whitespace-nowrap text-xs text-muted">{dateTime(m.created_at)}</Td>
+                          <Td className="text-xs">{m.ref_doc_no ?? [m.from_location, m.to_location].filter(Boolean).join(" → ")}</Td>
+                          <Td className="pr-5 text-xs">{m.created_by}<span className="block text-muted">{dateTime(m.created_at)}</span></Td>
                         </tr>
                       ))}
                     </tbody>
@@ -140,19 +145,11 @@ export default function DashboardPage() {
                 </div>
               )}
             </Card>
-            <Card>
-              <CardHeader title="Other modules" subtitle="Shown once their module is live — never estimated" />
-              <ul className="divide-y divide-line text-sm">
-                {([["Work in progress", data.work_in_progress], ["Outside processing outstanding", data.outside_processing_outstanding],
-                   ["Accounts receivable", data.accounts_receivable], ["Accounts payable", data.accounts_payable],
-                   ["Cash & bank", data.cash_and_bank], ["Invoices pending review", data.invoice_extraction_pending]] as [string, NotBuilt][]).map(([label]) => (
-                  <li key={label} className="flex items-center justify-between px-4 py-2.5">
-                    <span className="text-ink-2">{label}</span>
-                    <Badge>Not yet available</Badge>
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            <div className="space-y-5">
+              {can("production.view") && <ProductionCard wos={wos.data} challans={atVendor.data} />}
+              <ApprovalsCard adjustments={d.pending_adjustments} pos={d.purchase_orders_awaiting_approval} imports={d.pending_import_approvals}
+                             commits={d.pending_commit_approvals} docs={toReview.data?.length ?? 0} canDocs={can("stock.view")} />
+            </div>
           </div>
         </div>
       )}
@@ -166,73 +163,139 @@ function greeting() {
 }
 
 function MovementChart({ data }: { data: Summary["movements_14d"] }) {
-  const max = Math.max(1, ...data.map((d) => Math.max(d.in, d.out)));
-  const total = data.reduce((a, d) => a + d.in + d.out, 0);
+  const peak = Math.max(1, ...data.map((x) => Math.max(x.in, x.out)));
+  const top = Math.max(4, Math.ceil(peak / 4) * 4);
+  const ticks = [top, (top * 3) / 4, top / 2, top / 4, 0];
+  const total = data.reduce((a, x) => a + x.in + x.out, 0);
   return (
-    <div className="px-4 pb-4 pt-3">
-      <div className="mb-3 flex gap-4 text-xs text-muted">
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-success" /> Inbound</span>
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-primary" /> Outbound</span>
-        <span className="ml-auto tabular">{total} transactions</span>
-      </div>
-      <div className="flex h-44 items-end gap-1.5" role="img" aria-label="Bar chart of daily inbound and outbound movements">
-        {data.map((d) => (
-          <div key={d.date} className="group relative flex h-full flex-1 flex-col justify-end">
-            <div className="flex h-full items-end justify-center gap-[2px]">
-              <div className="w-1/2 max-w-3 rounded-t-sm bg-success/85" style={{ height: `${(d.in / max) * 100}%`, minHeight: d.in ? 3 : 0 }} />
-              <div className="w-1/2 max-w-3 rounded-t-sm bg-primary/85" style={{ height: `${(d.out / max) * 100}%`, minHeight: d.out ? 3 : 0 }} />
-            </div>
-            <span className="pointer-events-none absolute -top-7 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-navy px-1.5 py-0.5 text-[11px] text-white group-hover:block">
-              {d.in} in · {d.out} out
-            </span>
+    <div className="px-5 pb-5 pt-4">
+      <div className="flex gap-3">
+        <div className="flex h-56 flex-col justify-between pb-6 text-[11px] text-muted" aria-hidden>{ticks.map((t) => <span key={t} className="tabular">{t}</span>)}</div>
+        <div className="min-w-0 flex-1">
+          <div className="relative flex items-end justify-between gap-1.5 border-b border-line" style={{ height: 200 }}
+               role="img" aria-label={`Bar chart: ${total} stock movements in the last 14 days, receipts and issues per day`}>
+            {ticks.slice(0, 4).map((t, i) => <span key={t} className="pointer-events-none absolute inset-x-0 border-t border-surface-3" style={{ top: `${i * 25}%` }} aria-hidden />)}
+            {data.map((x) => (
+              <div key={x.date} className="group relative flex h-full flex-1 items-end justify-center gap-[3px]">
+                <div className="w-[42%] max-w-3.5 rounded-t bg-primary" style={{ height: `${(x.in / top) * 100}%`, minHeight: x.in ? 3 : 0 }} />
+                <div className="w-[42%] max-w-3.5 rounded-t bg-accent" style={{ height: `${(x.out / top) * 100}%`, minHeight: x.out ? 3 : 0 }} />
+                <span className="pointer-events-none absolute -top-7 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-navy px-2 py-0.5 text-[11px] text-white group-hover:block">
+                  {x.in} in · {x.out} out
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="mt-1.5 flex gap-1.5 border-t border-line pt-1.5">
-        {data.map((d, i) => (
-          <span key={d.date} className="flex-1 text-center text-[10px] text-muted">{i % 2 === 0 ? new Date(`${d.date}T00:00:00`).getDate() : ""}</span>
-        ))}
+          <div className="mt-2 flex justify-between gap-1.5">
+            {data.map((x) => <span key={x.date} className="flex-1 text-center text-[11px] text-muted">{new Date(`${x.date}T00:00:00`).getDate()}</span>)}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function AvailabilityBar({ s }: { s: Summary }) {
-  const total = Number(s.stock_on_hand_qty) || 1;
-  const seg = [
-    { label: "Available", v: Number(s.available_qty), c: "bg-success" },
-    { label: "Reserved", v: Number(s.reserved_qty), c: "bg-primary" },
-    { label: "QC hold", v: Number(s.qc_hold_qty), c: "bg-warning" },
+function RestockCard({ alerts }: { alerts: Alerts | undefined }) {
+  const rows = alerts ? [...alerts.out.map((r) => ({ ...r, out: true })), ...alerts.below_min.map((r) => ({ ...r, out: false }))].slice(0, 5) : [];
+  return (
+    <Card className="flex flex-col">
+      <CardHeader title="Restock alerts" actions={<Link href="/inventory?status=MIN" className="text-[13px] font-semibold text-primary hover:underline">View all</Link>} />
+      <div className="flex flex-1 flex-col gap-3 px-5 pb-3 pt-4">
+        <div className="grid grid-cols-2 gap-2">
+          <Link href="/inventory?status=OUT" className="rounded-xl bg-danger-soft px-3 py-2.5 text-xs font-semibold text-danger">
+            <span className="tabular block text-xl font-extrabold">{alerts?.out_count ?? "—"}</span>Out of stock
+          </Link>
+          <Link href="/inventory?status=MIN" className="rounded-xl bg-warning-soft px-3 py-2.5 text-xs font-semibold text-warning">
+            <span className="tabular block text-xl font-extrabold">{alerts?.below_min_count ?? "—"}</span>At or below minimum
+          </Link>
+        </div>
+        {alerts && rows.length === 0 ? <p className="py-6 text-center text-sm text-muted">Nothing to restock.</p> : (
+          <ul className="divide-y divide-surface-3">
+            {rows.map((r) => (
+              <li key={r.id}>
+                <Link href={`/locator?item=${r.id}`} className="flex items-center gap-3 py-2.5">
+                  <span className={cx("size-2.5 shrink-0 rounded-full", r.out ? "bg-danger" : "bg-warning")} aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold text-ink">{r.name}</span>
+                    <span className="font-mono text-[11px] text-muted">{r.item_code}{r.location ? ` · ${r.location}` : ""}</span>
+                  </span>
+                  <span className="text-right">
+                    <span className="tabular block text-[13px] font-bold text-ink">{qty(r.available)} {r.uom}</span>
+                    {r.restock_qty && <span className="text-[11px] text-muted">order {qty(r.restock_qty)}</span>}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ProductionCard({ wos, challans }: { wos: WoBrief[] | undefined; challans: ChallanRow[] | undefined }) {
+  const open = (wos ?? []).filter((w) => w.status !== "CANCELLED");
+  const groups = [
+    { label: "completed", n: open.filter((w) => w.status === "COMPLETED").length, c: "bg-success" },
+    { label: "partly completed", n: open.filter((w) => w.status !== "COMPLETED" && Number(w.qty_completed) > 0).length, c: "bg-primary" },
+    { label: "at job-work vendor", n: open.filter((w) => w.status !== "COMPLETED" && Number(w.qty_completed) === 0 && w.current_step?.status === "AT_VENDOR").length, c: "bg-accent" },
+  ];
+  const rest = open.length - groups.reduce((a, g) => a + g.n, 0);
+  groups.push({ label: "in progress or not started", n: rest, c: "bg-muted" });
+  const next = challans?.[0];
+  return (
+    <Card>
+      <CardHeader title="Production" actions={<Link href="/production" className="text-[13px] font-semibold text-primary hover:underline">{open.length} work orders</Link>} />
+      <div className="space-y-4 px-5 py-4">
+        {open.length > 0 && (
+          <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full" aria-hidden>
+            {groups.filter((g) => g.n).map((g) => <span key={g.label} className={g.c} style={{ flex: `${g.n} 1 0` }} />)}
+          </div>
+        )}
+        <ul className="grid grid-cols-2 gap-2 text-xs text-ink-2">
+          {groups.map((g) => <li key={g.label} className="flex items-center gap-2"><span className={cx("size-2.5 rounded-full", g.c)} aria-hidden /><b className="tabular">{g.n}</b> {g.label}</li>)}
+        </ul>
+        {next && (
+          <Link href={`/production/challans/${next.id}`} className="flex items-center gap-3 rounded-xl bg-accent-soft px-3.5 py-3 text-accent-ink">
+            <Truck className="size-5 shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1 text-xs">
+              <span className="block text-[13px] font-bold">Challan {next.number}</span>
+              At {next.supplier.name}{next.expected_return_date ? ` · back by ${dateFmt(next.expected_return_date)}` : ""}
+            </span>
+            {next.overdue && <Badge tone="danger">Overdue</Badge>}
+            {challans && challans.length > 1 && <span className="text-xs font-bold">+{challans.length - 1}</span>}
+          </Link>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ApprovalsCard({ adjustments, pos, imports, commits, docs, canDocs }: {
+  adjustments: number; pos: number; imports: number; commits: number; docs: number; canDocs: boolean;
+}) {
+  const rows = [
+    { label: "Stock adjustments", sub: "Cycle counts and corrections", n: adjustments, href: "/stock/adjustments", icon: ClipboardList, tone: "bg-warning-soft text-warning" },
+    { label: "Purchase orders", sub: "Drafts waiting for a checker", n: pos, href: "/purchase", icon: ShoppingCart, tone: "bg-teal-soft text-teal" },
+    ...(canDocs ? [{ label: "Scanned documents", sub: "Invoices and challans to review", n: docs, href: "/documents", icon: FileText, tone: "bg-primary-soft text-primary" }] : []),
+    { label: "Imports and delivery dates", sub: "Inventory imports · committed dates", n: imports + commits, href: "/inventory/import", icon: CalendarDays, tone: "bg-violet-soft text-violet" },
   ];
   return (
-    <div className="px-4 py-4">
-      <div className="flex h-3 overflow-hidden rounded-full bg-surface-3">
-        {seg.map((x) => <div key={x.label} className={x.c} style={{ width: `${(x.v / total) * 100}%` }} />)}
-      </div>
-      <dl className="mt-3 grid grid-cols-3 gap-2">
-        {seg.map((x) => (
-          <div key={x.label}>
-            <dt className="flex items-center gap-1.5 text-xs text-muted"><span className={cx("size-2 rounded-full", x.c)} /> {x.label}</dt>
-            <dd className="tabular mt-0.5 text-sm font-semibold">{qty(x.v)}</dd>
-          </div>
+    <Card>
+      <CardHeader title="Waiting for approval" />
+      <ul className="px-5 pb-2">
+        {rows.map((r) => (
+          <li key={r.label} className="border-t border-surface-3 first:border-0">
+            <Link href={r.href} className="flex items-center gap-3 py-3">
+              <span className={cx("grid size-9 shrink-0 place-items-center rounded-xl", r.tone)}><r.icon className="size-[17px]" aria-hidden /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold text-ink">{r.label}</span>
+                <span className="block truncate text-xs text-muted">{r.sub}</span>
+              </span>
+              <span className={cx("tabular text-sm font-extrabold", r.n ? "text-ink" : "text-muted")}>{r.n}</span>
+            </Link>
+          </li>
         ))}
-      </dl>
-    </div>
-  );
-}
-
-function TypeBars({ data }: { data: Record<string, string> }) {
-  const entries = Object.entries(data).sort((a, b) => Number(b[1]) - Number(a[1]));
-  const max = Math.max(1, ...entries.map(([, v]) => Number(v)));
-  if (!entries.length) return <p className="text-xs text-muted">No stock valued yet.</p>;
-  return (
-    <ul className="space-y-2">
-      {entries.map(([k, v]) => (
-        <li key={k}>
-          <div className="flex justify-between text-xs"><span className="text-ink-2">{itemTypeLabel(k)}</span><span className="tabular font-medium">{compactMoney(v)}</span></div>
-          <div className="mt-1 h-1.5 rounded-full bg-surface-3"><div className="h-full rounded-full bg-primary" style={{ width: `${(Number(v) / max) * 100}%` }} /></div>
-        </li>
-      ))}
-    </ul>
+      </ul>
+    </Card>
   );
 }

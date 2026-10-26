@@ -26,9 +26,9 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap",
+        "inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap",
         size === "sm" && "h-8 px-2.5 text-[13px]",
-        size === "md" && "h-9 px-3.5 text-sm",
+        size === "md" && "h-10 px-4 text-sm",
         size === "lg" && "h-12 px-5 text-base",
         VARIANT[variant],
         className,
@@ -45,13 +45,13 @@ export const Button = forwardRef<
 // Width defaults to full unless the caller passes its own w-* class.
 const width = (className?: string) => (/(^|\s)w-/.test(className ?? "") ? "" : "w-full");
 const control =
-  "rounded-md border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-3 disabled:text-muted";
+  "rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-3 disabled:text-muted";
 
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input({ className, onWheel, ...p }, ref) {
   return (
     <input
       ref={ref}
-      className={cx(control, width(className), "h-9", className)}
+      className={cx(control, width(className), "h-10", className)}
       // Scrolling the page over a focused number field must never change a quantity or cost.
       onWheel={(e) => {
         if (p.type === "number") e.currentTarget.blur();
@@ -74,7 +74,7 @@ export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<H
   ref,
 ) {
   return (
-    <select ref={ref} className={cx(control, width(className), "h-9 pr-8", className)} {...p}>
+    <select ref={ref} className={cx(control, width(className), "h-10 pr-8", className)} {...p}>
       {children}
     </select>
   );
@@ -98,7 +98,7 @@ export function Field({ label, hint, error, required, children, className }: {
 // ------------------------------------------------------------------ surfaces
 export function Card({ className, children, ...p }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cx("rounded-lg border border-line bg-surface shadow-card", className)} {...p}>
+    <div className={cx("rounded-2xl border border-line bg-surface shadow-card", className)} {...p}>
       {children}
     </div>
   );
@@ -106,9 +106,9 @@ export function Card({ className, children, ...p }: React.HTMLAttributes<HTMLDiv
 
 export function CardHeader({ title, subtitle, actions, className }: { title: React.ReactNode; subtitle?: React.ReactNode; actions?: React.ReactNode; className?: string }) {
   return (
-    <div className={cx("flex items-start justify-between gap-3 border-b border-line px-4 py-3", className)}>
+    <div className={cx("flex items-start justify-between gap-3 border-b border-line px-5 py-4", className)}>
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        <h3 className="text-[15px] font-bold text-ink">{title}</h3>
         {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -120,7 +120,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -153,7 +153,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, className }: {
 }
 
 // ------------------------------------------------------------------ status
-type Tone = "neutral" | "primary" | "success" | "warning" | "danger" | "info";
+type Tone = "neutral" | "primary" | "success" | "warning" | "danger" | "info" | "accent" | "violet" | "teal";
 const TONE: Record<Tone, string> = {
   neutral: "bg-surface-3 text-ink-2",
   primary: "bg-primary-soft text-primary",
@@ -161,11 +161,18 @@ const TONE: Record<Tone, string> = {
   warning: "bg-warning-soft text-warning",
   danger: "bg-danger-soft text-danger",
   info: "bg-info-soft text-info",
+  accent: "bg-accent-soft text-accent-ink",
+  violet: "bg-violet-soft text-violet",
+  teal: "bg-teal-soft text-teal",
+};
+const BAR: Record<Tone, string> = {
+  neutral: "bg-muted", primary: "bg-primary", success: "bg-success", warning: "bg-warning", danger: "bg-danger", info: "bg-info",
+  accent: "bg-accent", violet: "bg-violet", teal: "bg-teal",
 };
 
 export function Badge({ tone = "neutral", children, className, dot }: { tone?: Tone; children: React.ReactNode; className?: string; dot?: boolean }) {
   return (
-    <span className={cx("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11.5px] font-medium leading-4", TONE[tone], className)}>
+    <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold leading-4", TONE[tone], className)}>
       {dot && <span className="size-1.5 rounded-full bg-current" aria-hidden />}
       {children}
     </span>
@@ -289,20 +296,27 @@ export function Kbd({ children }: { children: React.ReactNode }) {
 }
 
 // ------------------------------------------------------------------ data
-export function Stat({ label, value, sub, tone, icon, href }: {
-  label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: Tone; icon?: React.ReactNode; href?: string;
+/** KPI tile: label, coloured icon tile, big value, optional progress bar (0–1) and a sub-line. */
+export function Stat({ label, value, sub, tone, icon, href, bar }: {
+  label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: Tone; icon?: React.ReactNode; href?: string; bar?: number;
 }) {
+  const t = tone ?? "neutral";
   const body = (
-    <Card className={cx("flex h-full flex-col gap-2 p-4", href && "transition-colors hover:border-line-strong")}>
-      <div className="flex items-center justify-between">
-        <span className="text-[12.5px] font-medium text-muted">{label}</span>
-        {icon && <span className={cx("rounded-md p-1.5", TONE[tone ?? "neutral"])}>{icon}</span>}
+    <Card className={cx("flex h-full flex-col gap-3 p-5", href && "transition-colors hover:border-line-strong")}>
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-[13px] font-semibold text-muted">{label}</span>
+        {icon && <span className={cx("grid size-11 shrink-0 place-items-center rounded-xl", TONE[t])}>{icon}</span>}
       </div>
-      <div className="tabular text-2xl font-semibold tracking-tight text-ink">{value}</div>
+      <div className="tabular text-3xl font-extrabold tracking-tight text-ink">{value}</div>
+      {bar != null && (
+        <div className={cx("h-1 rounded-full", TONE[t].split(" ")[0])} aria-hidden>
+          <div className={cx("h-1 rounded-full", BAR[t])} style={{ width: `${Math.round(Math.min(1, Math.max(0, bar)) * 100)}%` }} />
+        </div>
+      )}
       {sub && <div className="text-xs text-muted">{sub}</div>}
     </Card>
   );
-  return href ? <a href={href} className="block focus-visible:rounded-lg">{body}</a> : body;
+  return href ? <a href={href} className="block focus-visible:rounded-2xl">{body}</a> : body;
 }
 
 export function Th({ children, className, ...p }: React.ThHTMLAttributes<HTMLTableCellElement>) {

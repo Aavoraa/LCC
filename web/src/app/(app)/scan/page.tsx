@@ -1,6 +1,9 @@
 "use client";
 
-import { ArrowLeft, CheckCircle2, CloudOff, MapPin, RefreshCw, RotateCcw, Send } from "lucide-react";
+import {
+  ArrowDownToLine, ArrowLeft, ArrowLeftRight, ArrowUpFromLine, CheckCircle2, CloudOff, MapPin, RefreshCw, RotateCcw, Send, ShieldAlert, ShieldCheck,
+  SlidersHorizontal, Undo2, type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -14,14 +17,14 @@ import { discard, enqueue, readQueue, syncQueue, type QueuedTxn } from "@/lib/of
 import { itemTypeLabel, type ItemDetail, type Location, type Movement, type Resolve, type Totals } from "@/lib/types";
 
 type Txn = "RECEIPT" | "ISSUE" | "TRANSFER" | "RETURN" | "QC_HOLD" | "QC_RELEASE" | "ADJUST";
-const TXNS: { key: Txn; label: string; perm: string; hint: string }[] = [
-  { key: "RECEIPT", label: "Receive", perm: "stock.receive", hint: "Goods into a store location" },
-  { key: "ISSUE", label: "Issue", perm: "stock.issue", hint: "Against SO / PO / PAD / WIP / assembly / requisition" },
-  { key: "TRANSFER", label: "Transfer", perm: "stock.transfer", hint: "Between racks or bins" },
-  { key: "RETURN", label: "Return", perm: "stock.return", hint: "Unused material back to stores" },
-  { key: "QC_HOLD", label: "QC hold", perm: "qc.hold", hint: "Block quantity pending inspection" },
-  { key: "QC_RELEASE", label: "QC release", perm: "qc.hold", hint: "Release inspected quantity" },
-  { key: "ADJUST", label: "Adjustment", perm: "stock.adjust.request", hint: "Request a correction (needs approval)" },
+const TXNS: { key: Txn; label: string; perm: string; hint: string; icon: LucideIcon; tone: string }[] = [
+  { key: "RECEIPT", label: "Receive", perm: "stock.receive", hint: "Goods into a store location", icon: ArrowDownToLine, tone: "text-success" },
+  { key: "ISSUE", label: "Issue", perm: "stock.issue", hint: "Against SO / PO / PAD / WIP / assembly / requisition", icon: ArrowUpFromLine, tone: "text-danger" },
+  { key: "TRANSFER", label: "Transfer", perm: "stock.transfer", hint: "Between racks or bins", icon: ArrowLeftRight, tone: "text-ink-2" },
+  { key: "RETURN", label: "Return", perm: "stock.return", hint: "Unused material back to stores", icon: Undo2, tone: "text-ink-2" },
+  { key: "QC_HOLD", label: "QC hold", perm: "qc.hold", hint: "Block quantity pending inspection", icon: ShieldAlert, tone: "text-warning" },
+  { key: "QC_RELEASE", label: "QC release", perm: "qc.hold", hint: "Release inspected quantity", icon: ShieldCheck, tone: "text-teal" },
+  { key: "ADJUST", label: "Adjustment", perm: "stock.adjust.request", hint: "Request a correction (needs approval)", icon: SlidersHorizontal, tone: "text-violet" },
 ];
 const REF_TYPES = [["SALES_ORDER", "Sales order"], ["PURCHASE_ORDER", "Purchase order"], ["PAD", "PAD"], ["WIP", "WIP"],
   ["ASSEMBLY_REQUEST", "Assembly request"], ["REQUISITION", "Internal requisition"], ["SUPPLIER_RETURN", "Return to supplier"]];
@@ -164,7 +167,7 @@ function Scan() {
           <Card className="p-3"><Scanner onResult={load} paused={stage === "confirm"} /></Card>
           {scanError && <Alert>{scanError}</Alert>}
           {binLoc && (
-            <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary-soft px-3 py-2 text-sm">
+            <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary-soft px-3.5 py-2.5 text-sm">
               <span className="flex items-center gap-2"><MapPin className="size-4 text-primary" /> Bin scanned: <b className="font-mono">{binLoc.code}</b></span>
               <button className="text-xs text-muted hover:text-ink" onClick={() => setBinLoc(null)}>Clear</button>
             </div>
@@ -190,17 +193,33 @@ function Scan() {
                   </div>
                   <Link href={`/inventory?item=${scanned.item.id}`} className="shrink-0 text-xs font-medium text-primary hover:underline">Details</Link>
                 </div>
-                <div className="grid grid-cols-4 border-t border-line text-center">
-                  {[["Physical", scanned.totals.on_hand], ["Reserved", scanned.totals.reserved], ["QC hold", scanned.totals.qc_hold], ["Available", scanned.totals.available]].map(([l, val]) => (
-                    <div key={l} className="border-r border-line py-3 last:border-0">
+                {(() => {
+                  const here = scanned.balances.find((b) => Number(b.qty_available) > 0) ?? scanned.balances[0];
+                  const loc = here?.location ?? scanned.item.default_location;
+                  return loc ? (
+                    <div className="mx-4 flex items-center gap-3.5 rounded-xl bg-navy px-4 py-3 text-white">
+                      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/10"><MapPin className="size-5" aria-hidden /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold text-navy-text">Find it at</span>
+                        <span className="block truncate font-mono text-lg font-semibold">{loc.code}</span>
+                        <span className="block text-xs text-navy-text">{loc.warehouse.name} · Rack {loc.rack} · Bin {loc.bin}</span>
+                      </span>
+                      <span className="text-right"><span className="tabular block text-2xl font-extrabold leading-none">{qty(here?.qty_available ?? 0)}</span>
+                        <span className="text-[11px] font-semibold text-navy-text">{scanned.item.uom.code} free</span></span>
+                    </div>
+                  ) : null;
+                })()}
+                <div className="grid grid-cols-4 gap-2 p-4 text-center">
+                  {[["On hand", scanned.totals.on_hand], ["Reserved", scanned.totals.reserved], ["QC hold", scanned.totals.qc_hold], ["Available", scanned.totals.available]].map(([l, val]) => (
+                    <div key={l} className="rounded-xl bg-surface-2 py-2.5">
+                      <p className={cx("tabular text-lg font-extrabold", l === "Available" && "text-success")}>{qty(val)}</p>
                       <p className="text-[11px] text-muted">{l}</p>
-                      <p className={cx("tabular text-lg font-semibold", l === "Available" && "text-success")}>{qty(val)}</p>
                     </div>
                   ))}
                 </div>
-                {scanned.balances.length > 0 && (
+                {scanned.balances.length > 1 && (
                   <div className="flex flex-wrap gap-1.5 border-t border-line px-4 py-2.5">
-                    {scanned.balances.map((b) => <span key={b.location.id} className="rounded bg-surface-3 px-2 py-0.5 font-mono text-[11px]">{b.location.code}: {qty(b.qty_available)}</span>)}
+                    {scanned.balances.map((b) => <span key={b.location.id} className="rounded-full bg-surface-3 px-2.5 py-0.5 font-mono text-[11px]">{b.location.code}: {qty(b.qty_available)}</span>)}
                   </div>
                 )}
               </Card>
@@ -223,11 +242,12 @@ function Scan() {
               ) : (
                 <Card>
                   <CardHeader title="Transaction" subtitle={txn ? TXNS.find((t) => t.key === txn)?.hint : "Choose what you are doing with this item"} />
-                  <div className="grid grid-cols-3 gap-2 p-4 sm:grid-cols-4 xl:grid-cols-7">
+                  <div className="grid grid-cols-4 gap-2 p-4 xl:grid-cols-7" role="group" aria-label="Transaction type">
                     {allowed.map((t) => (
-                      <button key={t.key} onClick={() => chooseTxn(t.key)}
-                              className={cx("h-12 rounded-md border text-sm font-medium transition-colors",
-                                txn === t.key ? "border-primary bg-primary text-white" : "border-line-strong bg-surface hover:border-primary hover:text-primary")}>
+                      <button key={t.key} onClick={() => chooseTxn(t.key)} aria-pressed={txn === t.key}
+                              className={cx("flex h-[68px] flex-col items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-colors",
+                                txn === t.key ? "border-2 border-primary bg-primary-soft text-primary" : cx("border-line bg-surface hover:border-primary", t.tone))}>
+                        <t.icon className="size-5" aria-hidden />
                         {t.label}
                       </button>
                     ))}

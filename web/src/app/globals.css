@@ -2,23 +2,31 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design tokens — deep navy / cobalt primary, teal success, amber pending, red exceptions. */
+/* Design tokens — Lakshmi navy and cobalt primary, orange accent, teal success, amber pending, red exceptions. */
 :root {
-  --bg: #f3f5f8;
+  --bg: #f4f6fa;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --surface-3: #eef2f7;
-  --border: #e2e7ef;
-  --border-strong: #cbd3df;
+  --surface-2: #f8fafd;
+  --surface-3: #eef1f6;
+  --border: #e4e8f0;
+  --border-strong: #d5dbe6;
   --text: #0f172a;
   --text-2: #334155;
-  --muted: #64748b;
+  --muted: #5b6478;
   --primary: #1e4fd8;
   --primary-hover: #1a43b8;
   --primary-soft: #e8eefc;
-  --navy: #0b1a3a;
-  --navy-2: #12254f;
-  --navy-text: #c7d2ea;
+  --navy: #12245b;
+  --navy-2: #1a3170;
+  --navy-text: #c7d2f0;
+  --accent: #e8772e;
+  --accent-ink: #c2410c;
+  --accent-soft: #fef0e6;
+  --violet: #6941c6;
+  --violet-soft: #f0ebfc;
+  --teal: #0e7c70;
+  --teal-soft: #e3f6f3;
+  --nav-active: #12245b;
   --success: #0f8a6c;
   --success-soft: #e3f5ef;
   --warning: #b45309;
@@ -45,9 +53,17 @@
   --primary: #4f7cff;
   --primary-hover: #6a91ff;
   --primary-soft: #18264d;
-  --navy: #070d1e;
-  --navy-2: #0f1a36;
+  --navy: #0d1a40;
+  --navy-2: #15275a;
   --navy-text: #a9b6d3;
+  --accent: #f4a261;
+  --accent-ink: #f4a261;
+  --accent-soft: #33210f;
+  --violet: #a48af0;
+  --violet-soft: #241a3d;
+  --teal: #3cc3b0;
+  --teal-soft: #0f2d29;
+  --nav-active: #2a4bb0;
   --success: #2fbf98;
   --success-soft: #0f2d29;
   --warning: #f0a53a;
@@ -77,6 +93,14 @@
   --color-navy: var(--navy);
   --color-navy-2: var(--navy-2);
   --color-navy-text: var(--navy-text);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-nav-active: var(--nav-active);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -85,8 +109,8 @@
   --color-danger-soft: var(--danger-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
   --shadow-card: var(--shadow);
   --shadow-pop: var(--shadow-lg);
 }
@@ -96,7 +120,6 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
 }
 

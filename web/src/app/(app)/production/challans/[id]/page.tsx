@@ -137,105 +137,114 @@ export default function ChallanPage() {
 
 function ChallanSheet({ d, copy }: { d: ChallanDoc; copy: string }) {
   const c = d.company;
-  const cell = "border border-black px-2 py-1 align-top";
+  const label = "block text-[11px] font-bold uppercase tracking-wide text-[#4B5563]";
+  const cell = "border border-[#9CA3AF] px-2 py-2.5 align-top";
+  const head = "border border-[#9CA3AF] px-2 py-2 text-left text-[11px] font-extrabold uppercase tracking-wide";
+  const poDate = d.po_date ? dmy(d.po_date) : "";
   return (
-    <div className="mx-auto max-w-[800px] bg-white p-4 text-[12px] leading-snug text-black shadow-card print:max-w-none print:p-0 print:shadow-none">
-      <table className="w-full border-collapse">
-        <tbody>
-          <tr><td colSpan={3} className={`${cell} text-center text-xl font-bold tracking-wide`}>DELIVERY CHALLAN (JOB WORK)</td></tr>
-          <tr>
-            <td colSpan={2} className={`${cell} text-[15px] font-semibold`}>{c.name}{c.unit_name ? `  - ${c.unit_name}` : ""}</td>
-            <td className={`${cell} w-[30%] text-center`}>Delivery Challan<br />For<br />Job Work</td>
-          </tr>
-          <tr>
-            <td className={`${cell} w-[42%] whitespace-pre-line`}>
-              {c.address}{"\n"}State : {c.state}{"\n"}Phone : {c.phone}{c.fax ? `\nFax: ${c.fax}` : ""}
-              {c.regd_office ? `\nRegd Office : ${c.regd_office}` : ""}{c.regd_phone ? `\nPhone : ${c.regd_phone}` : ""}
-              {c.email ? `\nE-mail : ${c.email}` : ""}{"\n"}GSTIN : {c.gstin}
-            </td>
-            <td className={cell}>
-              <table className="w-full"><tbody>
-                <tr><td className="w-14">CIN</td><td className="w-3">:</td><td>{c.cin}</td></tr>
-                <tr><td>PAN</td><td>:</td><td>{c.pan}</td></tr>
-                <tr><td>GSTIN</td><td>:</td><td>{c.gstin}</td></tr>
-              </tbody></table>
-            </td>
-            <td className={`${cell} p-0`}>
-              <div className="border-b border-black px-2 py-1">No. <span className="font-semibold">{d.number}</span></div>
-              <div className="border-b border-black px-2 py-1">Dt. <span className="font-semibold">{dmy(d.challan_date)}</span></div>
-              <div className="space-y-1.5 px-2 py-2">
-                {COPIES.map((x) => (
-                  <p key={x} className={x === copy ? "font-bold" : "text-black/50"}>{x === copy ? "☑ " : "☐ "}{x}{x === copy && COPY_FOR[x] ? ` ${COPY_FOR[x].toUpperCase()}` : ""}</p>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 border-t border-black"><span className="border-r border-black px-2 py-1">PO No.</span><span className="px-2 py-1 font-semibold">{d.po_number ?? ""}</span></div>
-              <div className="grid grid-cols-2 border-t border-black"><span className="border-r border-black px-2 py-1">PO Dt.</span><span className="px-2 py-1 font-semibold">{d.po_date ? new Date(`${d.po_date}T00:00:00`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }).toUpperCase().replace(/ /g, "-") : ""}</span></div>
-            </td>
-          </tr>
-          <tr>
-            <td className={`${cell} whitespace-pre-line`}>
-              <span className="font-semibold underline">Details Of Consignee:</span>{"\n"}
-              <span className="font-semibold">{d.consignee.name}</span>{d.consignee.address ? `\n${d.consignee.address}` : ""}
-              {d.consignee.gstin ? `\nGSTIN : ${d.consignee.gstin}` : ""}{d.consignee.phone ? `\nPhone : ${d.consignee.phone}` : ""}
-            </td>
-            <td className={`${cell} whitespace-pre-line`}>
-              <span className="font-semibold underline">Shipped To:</span>{"\n"}
-              <span className="font-semibold">{d.consignee.name}</span>{d.consignee.address ? `\n${d.consignee.address}` : ""}
-            </td>
-            <td className={`${cell} whitespace-pre-line`}>
-              Vehicle No : <span className="font-semibold">{d.vehicle_no ?? ""}</span>{"\n"}
-              Transporter : {d.transporter ?? ""}{"\n"}
-              Waybill No : {d.waybill_no ?? ""}{"\n"}
-              Process Nature : <span className="font-semibold">{d.process_nature}</span>
-              {d.expected_return_date ? `\nReturn by : ${dmy(d.expected_return_date)}` : ""}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div className="mx-auto flex min-h-[1123px] w-full max-w-[794px] flex-col gap-4 bg-white px-[52px] py-12 text-[13px] leading-snug text-[#111827] shadow-card print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none">
+      <header className="flex items-start justify-between gap-6 border-b-[3px] border-[#12245B] pb-4">
+        <div className="flex max-w-[420px] items-start gap-3.5">
+          <div className="grid size-[50px] shrink-0 place-items-center rounded-xl bg-[#12245B] text-base font-extrabold text-white">LCC</div>
+          <div className="space-y-1">
+            <p className="text-[15px] font-extrabold leading-tight">{c.name}</p>
+            <p className="whitespace-pre-line text-xs leading-relaxed text-[#374151]">
+              {c.unit_name ? `${c.unit_name} · ` : ""}{c.address.replace(/\n/g, ", ")}{c.state ? `, ${c.state}` : ""}
+              {"\n"}Phone {c.phone}{c.email ? ` · ${c.email}` : ""}
+            </p>
+            <p className="font-mono text-[11px] text-[#374151]">GSTIN {c.gstin} · PAN {c.pan} · CIN {c.cin}</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1.5 text-right">
+          <p className="text-[22px] font-extrabold tracking-wide text-[#12245B]">DELIVERY CHALLAN</p>
+          <p className="text-xs font-semibold text-[#374151]">For job work · CGST Rule 45 / Section 143</p>
+          <p className="mt-1 rounded-md border-2 border-[#111827] px-2.5 py-1 text-xs font-extrabold tracking-wider">
+            {copy}{COPY_FOR[copy] ? ` · ${COPY_FOR[copy].toUpperCase()}` : ""}
+          </p>
+        </div>
+      </header>
 
-      <table className="mt-[-1px] w-full border-collapse">
+      <section className="grid grid-cols-4 overflow-hidden rounded-lg border border-[#9CA3AF]">
+        <div className="border-r border-[#D1D5DB] px-3 py-2.5"><span className={label}>Challan no.</span><span className="font-mono text-[15px] font-semibold">{d.number}</span></div>
+        <div className="border-r border-[#D1D5DB] px-3 py-2.5"><span className={label}>Challan date</span><span className="text-[15px] font-bold">{dmy(d.challan_date)}</span></div>
+        <div className="border-r border-[#D1D5DB] px-3 py-2.5"><span className={label}>PO no. / date</span><span className="text-[15px] font-bold">{d.po_number ?? "—"}{poDate ? ` · ${poDate}` : ""}</span></div>
+        <div className="px-3 py-2.5"><span className={label}>Return by</span><span className="text-[15px] font-bold">{d.expected_return_date ? dmy(d.expected_return_date) : "—"}</span></div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-4">
+        <div className="space-y-1 rounded-lg border border-[#9CA3AF] px-3.5 py-3">
+          <span className={label}>Consignee · shipped to</span>
+          <p className="text-[15px] font-extrabold">{d.consignee.name}</p>
+          {d.consignee.address && <p className="whitespace-pre-line leading-relaxed text-[#1F2937]">{d.consignee.address}</p>}
+          {d.consignee.gstin && <p className="font-mono text-xs">GSTIN {d.consignee.gstin}</p>}
+          {d.consignee.phone && <p className="text-xs">Phone {d.consignee.phone}</p>}
+        </div>
+        <div className="grid grid-cols-2 content-start gap-x-3 gap-y-2 rounded-lg border border-[#9CA3AF] px-3.5 py-3">
+          <span className={`${label} col-span-2`}>Transport &amp; process</span>
+          <p><span className="block text-[11px] text-[#4B5563]">Vehicle no.</span><span className="font-mono font-semibold">{d.vehicle_no ?? "—"}</span></p>
+          <p><span className="block text-[11px] text-[#4B5563]">Transporter</span><span className="font-bold">{d.transporter ?? "—"}</span></p>
+          <p><span className="block text-[11px] text-[#4B5563]">Waybill / e-way bill</span><span className="font-bold">{d.waybill_no ?? "—"}</span></p>
+          <p><span className="block text-[11px] text-[#4B5563]">Work order</span><span className="font-mono font-semibold">{d.work_order ? `${d.work_order.number} · step ${d.op_seq}` : "—"}</span></p>
+          <p className="col-span-2"><span className="block text-[11px] text-[#4B5563]">Nature of processing</span><span className="font-extrabold">{d.process_nature}</span></p>
+        </div>
+      </section>
+
+      <table className="w-full border-collapse">
         <thead>
-          <tr className="text-left">
-            {["Sl.", "Item Code", "Description of Goods", "HSN", "Qty", "UOM", "Rate (₹)", "Value (₹)"].map((h, i) => (
-              <th key={h} className={`${cell} font-semibold ${i >= 4 && i !== 5 ? "text-right" : ""}`}>{h}</th>
-            ))}
+          <tr className="bg-[#EEF2FA]">
+            <th className={head}>Sl.</th><th className={head}>Item code</th><th className={head}>Description of goods</th><th className={head}>HSN</th>
+            <th className={`${head} text-right`}>Qty</th><th className={head}>UOM</th><th className={`${head} text-right`}>Rate ₹</th><th className={`${head} text-right`}>Value ₹</th>
           </tr>
         </thead>
         <tbody>
           {d.lines.map((l) => (
             <tr key={l.line_no}>
               <td className={cell}>{l.line_no}</td>
-              <td className={`${cell} font-mono`}>{l.item_code}</td>
-              <td className={cell}>{l.description}{d.work_order && <span className="block text-[11px]">Job: {d.work_order.number} · for {d.process_nature.toLowerCase()}</span>}</td>
+              <td className={`${cell} font-mono text-xs`}>{l.item_code}</td>
+              <td className={cell}><span className="font-bold">{l.description}</span>
+                <span className="block text-xs text-[#374151]">For {d.process_nature.toLowerCase()}, to be returned after processing</span></td>
               <td className={cell}>{l.hsn_code}</td>
-              <td className={`${cell} text-right`}>{qty(l.quantity)}</td>
+              <td className={`${cell} text-right font-bold`}>{qty(l.quantity)}</td>
               <td className={cell}>{l.uom}</td>
               <td className={`${cell} text-right`}>{rupee(l.rate)}</td>
-              <td className={`${cell} text-right`}>{rupee(l.value)}</td>
+              <td className={`${cell} text-right font-bold`}>{rupee(l.value)}</td>
             </tr>
           ))}
-          <tr className="font-semibold">
+          <tr style={{ height: Math.max(40, 150 - (d.lines.length - 1) * 50) }}>
+            {Array.from({ length: 8 }).map((_, i) => <td key={i} className="border border-[#9CA3AF]" />)}
+          </tr>
+          <tr className="bg-[#F9FAFB] font-extrabold">
             <td colSpan={4} className={`${cell} text-right`}>Total</td>
             <td className={`${cell} text-right`}>{qty(d.quantity)}</td>
-            <td className={cell} />
-            <td className={cell} />
+            <td className={cell} /><td className={cell} />
             <td className={`${cell} text-right`}>{rupee(d.value)}</td>
-          </tr>
-          <tr><td colSpan={8} className={cell}>Value (approx., for job work only): <span className="font-semibold">{amountInWords(d.value)}</span></td></tr>
-          <tr>
-            <td colSpan={8} className={`${cell} text-[11px]`}>
-              Goods sent for job work under Section 143 of the CGST Act, 2017 read with Rule 45 of the CGST Rules, 2017 — not a supply, not for sale.
-              The processed goods are to be returned to us after {d.process_nature.toLowerCase()}, together with a copy of this challan.
-              {d.notes ? ` Note: ${d.notes}` : ""}
-            </td>
-          </tr>
-          <tr>
-            <td colSpan={4} className={`${cell} h-20`}>Received the above goods in good condition.<br /><br /><br />Receiver&apos;s signature &amp; seal</td>
-            <td colSpan={4} className={`${cell} text-right`}>For {c.name}<br /><br /><br />Authorised Signatory</td>
           </tr>
         </tbody>
       </table>
-      <p className="mt-1 text-[10px]">Prepared by {d.created_by ?? "—"}</p>
+
+      <p><span className="font-bold">Value in words (for job work only):</span> {amountInWords(d.value)}</p>
+
+      <div className="rounded-lg border border-[#9CA3AF] px-3.5 py-3 text-xs leading-relaxed text-[#1F2937]">
+        <span className="font-extrabold text-[#111827]">Declaration.</span> Goods sent for job work under Section 143 of the CGST Act, 2017 read with Rule 45 of the CGST
+        Rules, 2017. This is not a supply and the goods are not for sale. The processed goods are to be returned to us within one year, together with a copy of this challan.
+        {d.notes ? ` Note: ${d.notes}` : ""}
+      </div>
+
+      <div className="mt-auto grid grid-cols-2 gap-4">
+        <div className="flex h-[120px] flex-col justify-between rounded-lg border border-[#9CA3AF] px-3.5 py-3 text-xs">
+          <span>Received the above goods in good condition.</span>
+          <span className="border-t border-[#9CA3AF] pt-1.5 font-bold">Receiver&apos;s signature &amp; seal · Date</span>
+        </div>
+        <div className="flex h-[120px] flex-col justify-between rounded-lg border border-[#9CA3AF] px-3.5 py-3 text-right text-xs">
+          <span className="font-bold">For {c.name}</span>
+          <span className="border-t border-[#9CA3AF] pt-1.5 font-bold">Authorised signatory</span>
+        </div>
+      </div>
+
+      <footer className="flex justify-between gap-4 border-t border-[#D1D5DB] pt-2.5 text-[11px] text-[#4B5563]">
+        <span>{c.regd_office ? `Regd. office: ${c.regd_office.replace(/\n/g, " ")}` : ""}{c.regd_phone ? ` · ${c.regd_phone}` : ""}</span>
+        <span className="shrink-0">Prepared by {d.created_by ?? "—"}</span>
+      </footer>
     </div>
   );
 }

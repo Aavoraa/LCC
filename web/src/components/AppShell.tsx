@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Bell, ChevronDown, ChevronsLeft, ChevronsRight, CircleHelp, LogOut, Menu, Moon, Plus, Search, Sun, X,
+  Bell, ChevronDown, ChevronsLeft, ChevronsRight, CircleHelp, LayoutGrid, ListChecks, LogOut, MapPin, Menu, Moon, Plus, ScanLine, Search, Sun, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -101,26 +101,30 @@ function Shell({ children }: { children: React.ReactNode }) {
     () => NAV.map((s) => ({ ...s, items: s.items.filter((i) => !i.perm || can(...i.perm)) })).filter((s) => s.items.length),
     [can],
   );
-  const crumbs = useMemo(() => breadcrumbs(pathname, search), [pathname, search]);
+  const company = useApi<{ profile: Record<string, string> }>("/api/masters/company");
 
   const sidebar = (
-    <nav aria-label="Main" className="flex h-full flex-col bg-navy text-navy-text">
-      <div className={cx("flex h-14 items-center gap-2.5 border-b border-white/5 px-4", collapsed && "lg:justify-center lg:px-0")}>
-        <div className={cx("grid size-8 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[#2f62f0] to-[#1a3fae] text-[13px] font-bold text-white", collapsed && "lg:hidden")}>LM</div>
+    <nav aria-label="Main" className="flex h-full flex-col border-r border-line bg-surface text-ink-2">
+      <div className={cx("flex h-16 items-center gap-3 px-4", collapsed && "lg:justify-center lg:px-0")}>
+        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-navy text-[13px] font-extrabold tracking-wide text-white">LCC</div>
         <div className={cx("min-w-0 flex-1 leading-tight", collapsed && "lg:hidden")}>
-          <p className="truncate text-sm font-semibold text-white">Lakshmi Machine</p>
-          <p className="text-[11px] text-navy-text/70">Enterprise Resource Planning</p>
+          <p className="truncate text-[15px] font-extrabold text-navy dark:text-white">Lakshmi ERP</p>
+          <p className="truncate text-xs text-muted">Card Clothing · {company.data?.profile.unit_name ?? "Unit"}</p>
         </div>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden size-8 shrink-0 place-items-center rounded-md text-navy-text/70 hover:bg-white/5 hover:text-white lg:grid"
+          className="hidden size-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-ink lg:grid"
           aria-label={collapsed ? "Expand sidebar" : "Minimize sidebar"}
           title={collapsed ? "Expand sidebar" : "Minimize sidebar"}
         >
           {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto px-2.5 py-3">
+      <div className={cx("mx-3 mb-2 flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2 text-[13px] text-ink", collapsed && "lg:hidden")}>
+        <span className="size-2 rounded-full bg-success" aria-hidden />
+        <span className="truncate">Organisation {company.data?.profile.unit_code ?? "—"}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto px-3 py-2">
         {nav.map((section) => {
           const sectionClosed = closedSections.includes(section.section);
           return (
@@ -128,7 +132,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => toggleSection(section.section)}
               aria-expanded={!sectionClosed}
-              className={cx("mb-1 flex w-full items-center justify-between rounded px-2 text-[10.5px] font-semibold uppercase tracking-wider text-navy-text/50 hover:text-white", collapsed && "lg:hidden")}
+              className={cx("mb-1 flex w-full items-center justify-between rounded px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-muted hover:text-ink", collapsed && "lg:hidden")}
             >
               {section.section}
               <ChevronDown className={cx("size-3.5 transition-transform", sectionClosed && "-rotate-90")} aria-hidden />
@@ -142,14 +146,14 @@ function Shell({ children }: { children: React.ReactNode }) {
                   title={collapsed ? item.label : undefined}
                   aria-current={active ? "page" : undefined}
                   className={cx(
-                    "group flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors",
-                    active ? "bg-white/10 font-medium text-white" : "hover:bg-white/5 hover:text-white",
+                    "group mb-0.5 flex h-10 items-center gap-3 rounded-xl px-2.5 text-sm transition-colors",
+                    active ? "bg-nav-active font-semibold text-white" : "font-medium text-ink-2 hover:bg-surface-3 hover:text-ink",
                     collapsed && "lg:justify-center",
                   )}
                 >
-                  <item.icon className={cx("size-4 shrink-0", active ? "text-[#7fa2ff]" : "text-navy-text/70")} aria-hidden />
+                  <item.icon className={cx("size-[18px] shrink-0", active ? "text-white" : "text-muted group-hover:text-ink")} aria-hidden />
                   <span className={cx("flex-1 truncate", collapsed && "lg:hidden")}>{item.label}</span>
-                  {item.planned && <span className={cx("rounded bg-white/5 px-1 text-[10px] text-navy-text/60", collapsed && "lg:hidden")}>{item.planned}</span>}
+                  {item.planned && <span className={cx("rounded-full bg-surface-3 px-2 text-[10px] font-semibold text-muted", collapsed && "lg:hidden")}>{item.planned}</span>}
                 </Link>
               );
             })}
@@ -162,51 +166,49 @@ function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside className={cx("no-print hidden shrink-0 transition-[width] lg:block", collapsed ? "w-[60px]" : "w-60")}>{sidebar}</aside>
+      <aside className={cx("no-print hidden shrink-0 transition-[width] lg:block", collapsed ? "w-[72px]" : "w-64")}>{sidebar}</aside>
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-navy/50" onClick={() => setMobileOpen(false)} />
-          <div className="relative h-full w-64">{sidebar}</div>
+          <div className="relative h-full w-72">{sidebar}</div>
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 sm:px-5">
-          <button className="rounded p-1.5 text-muted hover:bg-surface-3 lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+        <header className="no-print flex h-16 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 sm:px-6">
+          <button className="grid size-10 place-items-center rounded-xl text-muted hover:bg-surface-3 lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu className="size-5" />
           </button>
-          <ol className="hidden min-w-0 items-center gap-1.5 text-[13px] text-muted md:flex" aria-label="Breadcrumb">
-            {crumbs.map((c, i) => (
-              <li key={c.href} className="flex items-center gap-1.5 truncate">
-                {i > 0 && <span aria-hidden>/</span>}
-                {i === crumbs.length - 1 ? <span className="truncate font-medium text-ink">{c.label}</span> : <Link href={c.href} className="hover:text-ink">{c.label}</Link>}
-              </li>
-            ))}
-          </ol>
-          <div className="flex-1" />
           <button
             onClick={() => setPaletteOpen(true)}
-            className="hidden h-9 w-full max-w-[280px] items-center gap-2 rounded-md border border-line bg-surface-2 px-3 text-[13px] text-muted hover:border-line-strong sm:flex"
+            className="hidden h-11 w-full max-w-[520px] items-center gap-2.5 rounded-xl border border-line bg-surface-2 px-3.5 text-sm text-muted hover:border-line-strong sm:flex"
           >
-            <Search className="size-4" /> <span className="flex-1 truncate text-left">Search items, pages…</span>
+            <Search className="size-[18px]" /> <span className="flex-1 truncate text-left">Search items, codes, POs, challans…</span>
             <Kbd>Ctrl K</Kbd>
           </button>
-          <button onClick={() => setPaletteOpen(true)} className="rounded-md p-2 text-muted hover:bg-surface-3 sm:hidden" aria-label="Search">
-            <Search className="size-4" />
+          <div className="flex-1" />
+          <button onClick={() => setPaletteOpen(true)} className="grid size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3 sm:hidden" aria-label="Search">
+            <Search className="size-[18px]" />
           </button>
+          {can("items.view") && (
+            <Link href="/scan" className="hidden size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3 sm:grid" aria-label="Scan a QR code" title="Scan & transact">
+              <ScanLine className="size-[18px]" />
+            </Link>
+          )}
           <QuickCreate />
           <Notifications />
-          <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="rounded-md p-2 text-muted hover:bg-surface-3"
+          <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="grid size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3"
                   aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}>
-            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            {theme === "dark" ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
           </button>
-          <button onClick={() => setHelpOpen(true)} className="hidden rounded-md p-2 text-muted hover:bg-surface-3 sm:block" aria-label="Help and keyboard shortcuts">
-            <CircleHelp className="size-4" />
+          <button onClick={() => setHelpOpen(true)} className="hidden size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3 md:grid" aria-label="Help and keyboard shortcuts">
+            <CircleHelp className="size-[18px]" />
           </button>
           <UserMenu name={user!.full_name} role={user!.roles.map((r) => r.name).join(", ")} onLogout={logout} />
         </header>
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1480px] px-4 py-5 sm:px-6 lg:py-6">{children}</div>
+          <div className="mx-auto w-full max-w-[1480px] px-4 pb-24 pt-5 sm:px-6 lg:py-7">{children}</div>
         </main>
+        <TabBar />
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <Modal open={helpOpen} onClose={() => setHelpOpen(false)} title="Keyboard shortcuts & help">
@@ -225,22 +227,31 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function breadcrumbs(pathname: string, search: URLSearchParams) {
-  const labels: Record<string, string> = {
-    inventory: "Inventory", new: "New item", import: "Import", qr: "QR codes", print: "Print labels", scan: "Scan & transact",
-    sales: "Sales & enquiries", stock: "Stock", ledger: "Ledger", adjustments: "Adjustments", purchase: "Procurement", audit: "Audit trail",
-    settings: "Settings", planned: "Planned", machines: "Machines & SOP spares", qc: "Quality control", reports: "Reports", q: "QR lookup",
-  };
-  const parts = pathname.split("/").filter(Boolean);
-  const crumbs = [{ label: "Home", href: "/" }];
-  let acc = "";
-  for (const p of parts) {
-    acc += `/${p}`;
-    crumbs.push({ label: labels[p] ?? decodeURIComponent(p).replace(/-/g, " "), href: acc });
-  }
-  const t = search.get("type");
-  if (t) crumbs.push({ label: t.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase()), href: `${acc}?type=${t}` });
-  return crumbs;
+/** Phone tab bar: the four things a stores worker does most, one thumb away. */
+function TabBar() {
+  const pathname = usePathname();
+  const { can } = useAuth();
+  const tabs = [
+    { href: "/", label: "Home", icon: LayoutGrid, show: true },
+    { href: "/scan", label: "Scan", icon: ScanLine, show: can("items.view") },
+    { href: "/locator", label: "Locate", icon: MapPin, show: can("stock.view") },
+    { href: "/inventory/overview", label: "Tasks", icon: ListChecks, show: can("stock.view") },
+  ].filter((t) => t.show);
+  return (
+    <nav aria-label="Quick" className="no-print fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+         style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+      {tabs.map((t) => {
+        const active = t.href === "/" ? pathname === "/" : pathname === t.href || pathname.startsWith(`${t.href}/`);
+        return (
+          <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined}
+                className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[11px]", active ? "font-extrabold text-primary" : "font-semibold text-muted")}>
+            <t.icon className="size-[22px]" strokeWidth={active ? 2.3 : 1.8} aria-hidden />
+            {t.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }
 
 function useClickOutside(onOutside: () => void) {
@@ -262,7 +273,7 @@ function QuickCreate() {
   if (!items.length) return null;
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="flex h-9 items-center gap-1 rounded-md bg-primary px-2.5 text-sm font-medium text-white hover:bg-primary-hover"
+      <button onClick={() => setOpen(!open)} className="flex h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-bold text-white hover:bg-primary-hover"
               aria-haspopup="menu" aria-expanded={open}>
         <Plus className="size-4" /> <span className="hidden sm:inline">Create</span>
       </button>
@@ -288,9 +299,9 @@ function Notifications() {
   const unread = data?.filter((n) => !n.is_read).length ?? 0;
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="relative rounded-md p-2 text-muted hover:bg-surface-3" aria-label={`Notifications, ${unread} unread`}>
-        <Bell className="size-4" />
-        {unread > 0 && <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">{unread > 9 ? "9+" : unread}</span>}
+      <button onClick={() => setOpen(!open)} className="relative grid size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3" aria-label={`Notifications, ${unread} unread`}>
+        <Bell className="size-[18px]" />
+        {unread > 0 && <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full border-2 border-surface bg-accent px-1 text-[10px] font-bold text-white">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
         <div className="absolute right-0 top-11 z-30 w-[340px] max-w-[calc(100vw-24px)] rounded-lg border border-line bg-surface shadow-pop">
@@ -325,10 +336,10 @@ function UserMenu({ name, role, onLogout }: { name: string; role: string; onLogo
   const initials = name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 rounded-md py-1 pl-1 pr-2 hover:bg-surface-3" aria-haspopup="menu" aria-expanded={open}>
-        <span className="grid size-7 place-items-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">{initials}</span>
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-2.5 rounded-xl py-1 pl-1 pr-2 hover:bg-surface-3" aria-haspopup="menu" aria-expanded={open}>
+        <span className="grid size-9 place-items-center rounded-full bg-primary-soft text-[13px] font-bold text-navy dark:text-primary">{initials}</span>
         <span className="hidden text-left leading-tight xl:block">
-          <span className="block text-[13px] font-medium text-ink">{name}</span>
+          <span className="block text-sm font-semibold text-ink">{name}</span>
           <span className="block max-w-36 truncate text-[11px] text-muted">{role}</span>
         </span>
         <ChevronDown className="hidden size-3.5 text-muted xl:block" />
