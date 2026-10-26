@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Eye, EyeOff, FileText, Lock, Mic, ScanLine, ShieldCheck, Truck, User } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, FileText, Lock, Mic, ScanLine, ShieldCheck, Smartphone, Truck, User } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Alert, Button } from "@/components/ui";
@@ -118,6 +118,9 @@ function Login() {
           </div>
           <p className="flex flex-wrap justify-between gap-2 pt-1 text-xs text-muted">
             <span>© Lakshmi Card Clothing Mfg. Co. Pvt. Ltd.</span>
+            <a href="/downloads/LCC-Stores.apk" download className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
+              <Smartphone className="size-3.5" aria-hidden /> Android app (APK)
+            </a>
           </p>
         </form>
       </section>

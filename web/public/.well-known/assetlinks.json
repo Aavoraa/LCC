@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.lakshmicardclothing.stores",
+      "sha256_cert_fingerprints": [
+        "CE:5E:0E:1E:3F:73:75:9B:9A:72:A1:FE:C1:E5:AA:F6:4F:25:04:92:A6:B8:B1:DE:29:74:FF:C1:6E:86:37:69"
+      ]
+    }
+  }
+]
