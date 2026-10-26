@@ -46,9 +46,19 @@ async def business_error(_: Request, exc: BusinessError):
 
 @app.get("/health", tags=["ops"])
 def health():
-    with engine.connect() as conn:
-        conn.execute(text("SELECT 1"))
-    return {"status": "ok", "database": engine.dialect.name}
+    """Liveness plus database reachability. On failure, reports the error type and first line (credentials scrubbed)
+    and the last start-up migration result, so a broken deployment can be diagnosed from outside."""
+    from .bootstrap import STATE, describe_error
+
+    boot = {"ran": STATE["ran"], "error": STATE["error"]}
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        log.exception('"health: database check failed"')
+        return JSONResponse(status_code=503, content={"status": "error", "database": engine.dialect.name,
+                                                      "error": describe_error(e), "bootstrap": boot})
+    return {"status": "ok", "database": engine.dialect.name, "bootstrap": boot}
 
 
 for r in (auth.router, auth.users_router, items.router, items.qr_router, stock.router, masters.router,

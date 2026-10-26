@@ -60,26 +60,36 @@ class ExtractionProvider(Protocol):
 
 
 def build_schema(spec: DocSpec) -> dict:
-    """Strict JSON schema: missing values are empty strings (no nulls), numbers are digit strings, confidence 0–1."""
-    scored = {"type": "object", "properties": {"value": {"type": "string"}, "confidence": {"type": "number"}},
-              "required": ["value", "confidence"], "additionalProperties": False}
-    line_props = {k: {"type": "string"} for k, _ in spec.lines}
-    line_props["confidence"] = {"type": "number"}
-    line_props["uncertain_fields"] = {"type": "array", "items": {"type": "string"}}
-    return {
-        "type": "object",
-        "properties": {
-            "detected_document_type": {"type": "string"},
-            "document_type_matches": {"type": "boolean"},
-            "header": {"type": "object", "properties": {k: scored for k, _ in spec.header},
-                       "required": [k for k, _ in spec.header], "additionalProperties": False},
-            "lines": {"type": "array", "items": {"type": "object", "properties": line_props, "required": list(line_props),
-                                                 "additionalProperties": False}},
-            "notes": {"type": "array", "items": {"type": "string"}},
-        },
-        "required": ["detected_document_type", "document_type_matches", "header", "lines", "notes"],
-        "additionalProperties": False,
-    }
+    """Strict JSON schema for the reply. Fields are (name, value, confidence) entries keyed by an enum rather than one
+    property per field: a property per field compiles to a grammar the API rejects as too large. Missing values are
+    empty strings (no nulls), numbers are digit strings, confidence is 0–1."""
+    header_keys = [k for k, _ in spec.header]
+    line_keys = [k for k, _ in spec.lines]
+    obj = lambda props: {"type": "object", "properties": props, "required": list(props), "additionalProperties": False}  # noqa: E731
+    return obj({
+        "detected_document_type": {"type": "string"},
+        "document_type_matches": {"type": "boolean"},
+        "fields": {"type": "array", "items": obj({"field": {"type": "string", "enum": header_keys}, "value": {"type": "string"},
+                                                  "confidence": {"type": "number"}})},
+        "lines": {"type": "array", "items": obj({
+            "cells": {"type": "array", "items": obj({"field": {"type": "string", "enum": line_keys}, "value": {"type": "string"}})},
+            "confidence": {"type": "number"},
+            "uncertain_fields": {"type": "array", "items": {"type": "string", "enum": line_keys}},
+        })},
+        "notes": {"type": "array", "items": {"type": "string"}},
+    })
+
+
+def to_tables(raw: dict) -> dict:
+    """Reply in the schema's list form → ``header: {field: {value, confidence}}`` and ``lines: [{field: value, …}]``."""
+    header = {f["field"]: {"value": f.get("value", ""), "confidence": f.get("confidence", 0)} for f in raw.get("fields") or []}
+    lines = []
+    for line in raw.get("lines") or []:
+        row = {c["field"]: c.get("value", "") for c in line.get("cells") or []}
+        row["confidence"] = line.get("confidence", 0)
+        row["uncertain_fields"] = line.get("uncertain_fields") or []
+        lines.append(row)
+    return {**{k: v for k, v in raw.items() if k not in ("fields", "lines")}, "header": header, "lines": lines}
 
 
 SYSTEM = """You extract data from scanned business documents for an Indian manufacturing company's ERP (stores, \
@@ -95,8 +105,10 @@ symbols or units (1,23,456.50 becomes 123456.50). Put the unit of measure in its
 that is not printed - the system recomputes totals itself and compares them with what you read.
 - confidence is your certainty (0 to 1) that the value is exactly what the document shows: below 0.8 when the print \
 is blurred, cut off, overwritten or ambiguous; 0 for empty fields.
-- One entry in lines per printed line item, in document order. In uncertain_fields list the line fields you are \
-unsure of. Skip sub-total, tax and total rows - they belong in the header.
+- Give one entry in fields for every header field listed, including empty ones.
+- One entry in lines per printed line item, in document order, with one cell per line field (empty value if not \
+printed). In uncertain_fields list the line fields you are unsure of. Skip sub-total, tax and total rows - they \
+belong in the header fields.
 - In notes, mention anything a reviewer should check (stamps over figures, handwritten corrections, missing pages, \
 more than one document in the upload).
 - Set detected_document_type to what the document actually is and document_type_matches to false if it is not \
@@ -176,8 +188,8 @@ class ClaudeVisionProvider:
             raise ExtractionError("The document has too many lines to read in one pass - upload fewer pages at a time")
         text = next((b.text for b in msg.content if b.type == "text"), "")
         try:
-            data = json.loads(text)
-        except json.JSONDecodeError as e:
+            data = to_tables(json.loads(text))
+        except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as e:
             raise ExtractionError("The AI service returned an unreadable answer - try again") from e
         u = msg.usage
         usage = {"input_tokens": u.input_tokens, "output_tokens": u.output_tokens, "request_id": getattr(msg, "_request_id", None), "served_by": msg.model}

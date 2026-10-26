@@ -19,6 +19,8 @@ log = logging.getLogger("erp.bootstrap")
 DEMO_ADMIN_USERNAME = "demo@example.com"
 DEMO_ADMIN_PASSWORD = "demo@12345"
 _LOCK_ID = 0x4C4343  # "LCC" – serialises concurrent cold starts
+# Outcome of the last bootstrap run, reported by /health so a failed migration is visible without the host logs.
+STATE: dict[str, str | bool | None] = {"ran": False, "error": None}
 
 
 def _enabled() -> bool:
@@ -47,6 +49,17 @@ def _seed_first_admin() -> None:
         log.info('"bootstrap: created first admin %s"', username)
 
 
+def describe_error(e: BaseException) -> str:
+    """First line of an error, safe to show publicly: connection URLs and passwords are scrubbed."""
+    import re
+
+    msg = str(getattr(e, "orig", None) or e).strip().splitlines()
+    text_ = f"{type(e).__name__}: {msg[0] if msg else ''}"
+    text_ = re.sub(r"[a-z+]+://[^\s@/]+@", "<url>://***@", text_)  # user:password in URLs
+    text_ = re.sub(r"(password|secret|token)=\S+", r"\1=***", text_, flags=re.I)
+    return text_[:300]
+
+
 def bootstrap() -> None:
     if not _enabled():
         return
@@ -61,5 +74,9 @@ def bootstrap() -> None:
             finally:
                 if postgres:
                     lock_conn.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": _LOCK_ID})
-    except Exception:  # keep serving (/health etc.) so the failure is visible in logs rather than a dead function
+        STATE["error"] = None
+    except Exception as e:  # keep serving (/health etc.) so the failure is visible rather than a dead function
+        STATE["error"] = describe_error(e)
         log.exception('"bootstrap failed"')
+    finally:
+        STATE["ran"] = True
