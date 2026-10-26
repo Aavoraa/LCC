@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   title: { default: "Lakshmi ERP", template: "%s · Lakshmi ERP" },
   description: "QR-enabled inventory, sales availability and delivery estimation",
   manifest: "/manifest.webmanifest",
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "LCC Stores", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = { themeColor: "#12245b", width: "device-width", initialScale: 1 };

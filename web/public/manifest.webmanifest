@@ -1,9 +1,21 @@
 {
-  "name": "Lakshmi Machine ERP",
-  "short_name": "LM Stores",
+  "name": "Lakshmi ERP",
+  "short_name": "LCC Stores",
+  "description": "Scan, receive, issue and locate stores items — Lakshmi Card Clothing, Unit 4",
+  "id": "/",
   "start_url": "/scan",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0b1a3a",
-  "theme_color": "#0b1a3a",
-  "icons": []
+  "orientation": "portrait",
+  "background_color": "#f4f6fa",
+  "theme_color": "#12245b",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Scan & transact", "url": "/scan", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Item locator", "url": "/locator", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
 }
