@@ -2,7 +2,7 @@
 
 import { AlertTriangle, ArrowLeft, CheckCircle2, Minus, Plus, RotateCw, Save, ShieldCheck, ShieldX, Sparkles, Trash2, XCircle, ZoomIn, ZoomOut } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Button, Card, CardHeader, ErrorState, Field, Input, Modal, Spinner, Textarea, cx } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -24,6 +24,7 @@ function toForm(d: DocDetail, lineKeys: string[]): Form {
 export default function DocumentReviewPage() {
   const { id } = useParams<{ id: string }>();
   const { can, user } = useAuth();
+  const router = useRouter();
   const doc = useApi<DocDetail>(`/api/documents/${id}`);
   const cfg = useApi<DocConfig>("/api/documents/config");
   const [form, setForm] = useState<Form | null>(null);
@@ -86,6 +87,20 @@ export default function DocumentReviewPage() {
             </Button>
           )}
           {canEdit && <Button size="sm" icon={<Save className="size-4" />} disabled={!dirty} loading={busy === "save"} onClick={save}>Save</Button>}
+          {d.status !== "APPROVED" && (can("purchase.manage") || can("stock.receive") || can("production.manage") || can("imports.create")) && (
+            <Button size="sm" variant="ghost" className="text-danger" icon={<Trash2 className="size-4" />} loading={busy === "delete"} onClick={async () => {
+              if (!confirm(`Delete ${d.number} and its uploaded file(s)? This cannot be undone.`)) return;
+              setBusy("delete");
+              setMsg(null);
+              try {
+                await api(`/api/documents/${id}`, { method: "DELETE" });
+                router.push("/documents");
+              } catch (e) {
+                setMsg({ ok: false, text: (e as ApiError).message });
+                setBusy(null);
+              }
+            }}>Delete</Button>
+          )}
           {canDecide && <>
             <Button size="sm" variant="success" icon={<ShieldCheck className="size-4" />} disabled={dirty} title={dirty ? "Save first" : undefined} onClick={() => setDecision("approve")}>Approve</Button>
             <Button size="sm" variant="danger" icon={<ShieldX className="size-4" />} onClick={() => setDecision("reject")}>Reject</Button>

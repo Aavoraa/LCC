@@ -116,6 +116,14 @@ def test_invoice_extracted_validated_and_approved_by_checker(as_user, po, monkey
     listed = ok(manager.get("/api/documents", params={"q": "SBB/2026"}))
     assert {d["status"] for d in listed} == {"APPROVED", "REJECTED"}
 
+    # Wrong uploads can be deleted (with their files); approved documents stay.
+    assert purchase.delete(f"/api/documents/{doc['id']}").status_code == 409
+    assert as_user("sales").delete(f"/api/documents/{dup['id']}").status_code == 403
+    assert purchase.delete(f"/api/documents/{dup['id']}").status_code == 204
+    assert purchase.get(f"/api/documents/{dup['id']}").status_code == 404
+    assert purchase.get(f"/api/documents/{dup['id']}/pages/1").status_code == 404
+    assert any(e["action"] == "document.delete" for e in ok(manager.get("/api/audit", params={"action": "document.delete"}))["events"])
+
 
 def test_gst_type_and_maker_checker(as_user, po, monkeypatch):
     monkeypatch.setattr("app.services.documents.get_provider", lambda: FakeProvider(invoice(po["number"], igst=True, number="X-1")))

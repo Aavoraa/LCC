@@ -250,6 +250,18 @@ def decide(db: Session, user: User, doc: ScannedDocument, approve: bool, note: s
     return doc
 
 
+def delete_document(db: Session, user: User, doc: ScannedDocument) -> None:
+    """Remove a wrong or unwanted upload with its files. Approved documents are the record of an approved invoice and
+    stay; the deletion itself is kept in the audit trail."""
+    if doc.status == "APPROVED":
+        raise BusinessError(f"{doc.number} is approved and cannot be deleted", status_code=409, code="state")
+    audit(db, user, "document.delete", "scanned_document", doc.id,
+          {"number": doc.number, "type": doc.doc_type, "status": doc.status, "reference": doc.reference_no,
+           "party": doc.party_name, "total": doc.total, "file": doc.title})
+    db.delete(doc)
+    db.flush()
+
+
 # ------------------------------------------------------------------ validation
 def _refresh(db: Session, doc: ScannedDocument) -> None:
     """Copy key fields out of ``data`` and re-run the checks."""

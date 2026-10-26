@@ -57,6 +57,9 @@ class Api:
     def put(self, url, **kw):
         return self.c.put(url, headers=self.h, **kw)
 
+    def delete(self, url, **kw):
+        return self.c.delete(url, headers=self.h, **kw)
+
 
 @pytest.fixture
 def as_user(client):

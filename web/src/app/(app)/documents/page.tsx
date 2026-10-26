@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, FileText, ImagePlus, Loader2, ScanLine, Sparkles, Upload, X } from "lucide-react";
+import { Camera, FileText, ImagePlus, Loader2, Pencil, ScanLine, Sparkles, Trash2, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -23,6 +23,22 @@ function Documents() {
   const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString();
   const list = useApi<DocBrief[]>(`/api/documents${qs ? `?${qs}` : ""}`);
   const canUpload = can("purchase.manage") || can("stock.receive") || can("production.manage") || can("imports.create");
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
+
+  async function remove(d: DocBrief) {
+    if (!confirm(`Delete ${d.number}${d.reference_no ? ` (${d.reference_no})` : ""} and its uploaded file(s)? This cannot be undone.`)) return;
+    setDeleting(d.id);
+    setListError(null);
+    try {
+      await api(`/api/documents/${d.id}`, { method: "DELETE" });
+      list.reload();
+    } catch (e) {
+      setListError((e as ApiError).message);
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   return (
     <>
@@ -51,13 +67,14 @@ function Documents() {
             </Select>
           </div>
         } />
+        {listError && <div className="px-4 pt-3"><Alert>{listError}</Alert></div>}
         {list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : !list.data ? <Spinner /> : list.data.length === 0 ? (
           <EmptyState icon={<ScanLine className="size-8" />} title="No documents yet" description="Upload a PDF or photograph an invoice to get started." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-[13px]">
+            <table className="w-full min-w-[1100px] text-[13px]">
               <thead><tr><Th>Document</Th><Th>Type</Th><Th>Party</Th><Th>Reference</Th><Th>Date</Th><Th className="text-right">Total</Th>
-                <Th>Checks</Th><Th>Status</Th><Th>Uploaded</Th></tr></thead>
+                <Th>Checks</Th><Th>Status</Th><Th>Uploaded</Th><Th className="text-right">Actions</Th></tr></thead>
               <tbody>{list.data.map((d) => (
                 <tr key={d.id} className="hover:bg-surface-2">
                   <Td className="h-10"><Link href={`/documents/${d.id}`} className="font-mono text-xs font-semibold text-primary">{d.number}</Link>
@@ -71,6 +88,18 @@ function Documents() {
                     : d.status === "UPLOADED" || d.status === "FAILED" ? "—" : <Badge tone="success">OK</Badge>}</Td>
                   <Td><Badge tone={STATUS_TONE[d.status]} dot>{STATUS_LABEL[d.status]}</Badge></Td>
                   <Td className="text-xs">{d.created_by}<span className="block text-muted">{dateTime(d.created_at)}</span></Td>
+                  <Td className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Link href={`/documents/${d.id}`}>
+                        <Button size="sm" variant="secondary" icon={<Pencil className="size-3.5" />}>{d.status === "APPROVED" || d.status === "REJECTED" ? "View" : "Edit"}</Button>
+                      </Link>
+                      {canUpload && (
+                        <Button size="sm" variant="ghost" icon={<Trash2 className="size-3.5" />} loading={deleting === d.id}
+                          disabled={d.status === "APPROVED"} title={d.status === "APPROVED" ? "Approved documents cannot be deleted" : "Delete"}
+                          onClick={() => remove(d)} aria-label={`Delete ${d.number}`} className="text-danger" />
+                      )}
+                    </div>
+                  </Td>
                 </tr>
               ))}</tbody>
             </table>

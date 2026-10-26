@@ -108,6 +108,13 @@ def get_document(doc_id: int, db: Session = Depends(get_db), _: User = Depends(V
     return detail(db, _doc(db, doc_id))
 
 
+@router.delete("/{doc_id}", status_code=204)
+def delete_document(doc_id: int, db: Session = Depends(get_db), user: User = Depends(UPLOAD)):
+    svc.delete_document(db, user, _doc(db, doc_id))
+    db.commit()
+    return Response(status_code=204)
+
+
 @router.get("/{doc_id}/pages/{page_no}")
 def page_file(doc_id: int, page_no: int, db: Session = Depends(get_db), _: User = Depends(VIEW)):
     page = db.scalar(select(DocumentPage).where(DocumentPage.document_id == doc_id, DocumentPage.page_no == page_no))
