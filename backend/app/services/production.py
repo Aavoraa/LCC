@@ -246,8 +246,12 @@ def _ready(wo: WorkOrder, op: WorkOrderOp) -> None:
 
 
 def op_action(db: Session, user: User, wo: WorkOrder, seq: int, action: str, *, supplier_id: int | None = None,
-              challan_no: str | None = None, passed: bool | None = None, note: str | None = None) -> WorkOrderOp:
-    """start / finish (in-house), send / receive (outside job-work), qc (pass or fail; fail = rework)."""
+              challan_no: str | None = None, passed: bool | None = None, note: str | None = None,
+              challan: dict | None = None) -> WorkOrderOp:
+    """start / finish (in-house), send / receive (outside job-work), qc (pass or fail; fail = rework).
+    Sending raises a job-work delivery challan (numbered automatically unless ``challan_no`` is given); ``challan``
+    carries its transport / PO details."""
+    from . import osp
     op = _op(wo, seq)
     now = _now()
     if action == "start":
@@ -266,13 +270,15 @@ def op_action(db: Session, user: User, wo: WorkOrder, seq: int, action: str, *, 
         sid = supplier_id or op.supplier_id
         if not sid or db.get(Supplier, sid) is None:
             raise BusinessError("Choose the job-work vendor for this step")
-        if not (challan_no or "").strip():
-            raise BusinessError("Enter the delivery challan number sent with the material")
-        op.status, op.supplier_id, op.challan_no, op.started_at = "AT_VENDOR", sid, challan_no.strip(), now
+        if Decimal(wo.quantity) - Decimal(wo.qty_completed) <= 0:
+            raise _state(f"{wo.number} has nothing left to send")
+        ch = osp.create_for_op(db, user, wo, op, supplier_id=sid, number=challan_no, **(challan or {}))
+        op.status, op.supplier_id, op.challan_no, op.started_at = "AT_VENDOR", sid, ch.number, now
     elif action == "receive":
         if op.mode != "OUTSIDE" or op.status != "AT_VENDOR":
             raise _state(f"Step {seq} is not at a vendor")
         op.status, op.done_at, op.done_by_id = "DONE", now, user.id
+        osp.receive_for_op(db, user, wo, op)
     elif action == "qc":
         if op.status != "DONE":
             raise _state(f"Step {seq} must be finished before QC")

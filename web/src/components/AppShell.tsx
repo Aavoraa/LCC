@@ -41,12 +41,16 @@ function useTheme() {
   return [theme, setTheme] as const;
 }
 
+const NAV_PATHS = NAV.flatMap((s) => s.items.map((i) => i.href.split("?")[0]));
+
 function isActive(item: NavItem, pathname: string, search: URLSearchParams) {
   const [path, query] = item.href.split("?");
   if (query) return pathname === path && search.get("type") === new URLSearchParams(query).get("type");
   if (path === "/") return pathname === "/";
-  if (path === "/inventory") return pathname.startsWith("/inventory") && !search.get("type");
-  return pathname.startsWith(path);
+  if (pathname !== path && !pathname.startsWith(`${path}/`)) return false;
+  // A more specific entry (e.g. /reports/voice under /reports) owns its own pages.
+  if (NAV_PATHS.some((p) => p.length > path.length && p.startsWith(`${path}/`) && (pathname === p || pathname.startsWith(`${p}/`)))) return false;
+  return path !== "/inventory" || !search.get("type");
 }
 
 function Shell({ children }: { children: React.ReactNode }) {

@@ -81,7 +81,7 @@ export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<H
 });
 
 export function Field({ label, hint, error, required, children, className }: {
-  label: string; hint?: string; error?: string; required?: boolean; children: React.ReactNode; className?: string;
+  label: React.ReactNode; hint?: string; error?: string; required?: boolean; children: React.ReactNode; className?: string;
 }) {
   return (
     <label className={cx("flex flex-col gap-1.5", className)}>

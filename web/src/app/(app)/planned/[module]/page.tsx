@@ -1,7 +1,8 @@
 "use client";
 
 import { Construction } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Badge, Card, PageHeader } from "@/components/ui";
 
 const MODULES: Record<string, { title: string; phase: string; scope: string[] }> = {
@@ -15,15 +16,14 @@ const MODULES: Record<string, { title: string; phase: string; scope: string[] }>
     scope: ["Chart of accounts, journals and vouchers", "Sales and purchase invoices, receipts and payments",
       "Inventory-to-GL posting rules with unique source references", "Period locking, reversal entries, trial balance, P&L, balance sheet", "Configurable GST — subject to review by the company's accountant"],
   },
-  "invoice-scanner": {
-    title: "Invoice Scanner & AI Extraction", phase: "Phase 6",
-    scope: ["Upload / camera capture of PDF, JPG, PNG documents to private storage", "Claude Vision extraction behind a provider interface (server-side API key)",
-      "Split-screen review with confidence and uncertain-field highlighting", "Arithmetic, tax, PO/GRN and duplicate-invoice validation", "Post to accounts only after approval"],
-  },
 };
 
 export default function PlannedModule() {
   const { module } = useParams<{ module: string }>();
+  const router = useRouter();
+  useEffect(() => {
+    if (module === "invoice-scanner") router.replace("/documents"); // built: Invoice Scanner
+  }, [module, router]);
   const m = MODULES[module] ?? { title: module, phase: "Later phase", scope: [] };
   return (
     <>

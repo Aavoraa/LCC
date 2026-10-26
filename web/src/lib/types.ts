@@ -162,6 +162,44 @@ export interface SOLine {
   qty_reserved: string; qty_issued: string; qty_shortage: string; forecast_date: string | null; forecast: LineForecast | null;
 }
 
+// ---------------------------------------------------------------- item locator
+export interface LocatorFind {
+  kind: "item" | "location" | "search";
+  location: string | null;
+  item_id: number | null;
+  warning: string | null;
+  candidates: { id: number; item_code: string; name: string; item_type: ItemType; uom: string; location: string | null }[];
+}
+
+export interface PurchaseLine {
+  po_id: number; po_number: string; status: string; supplier: string; order_date: string; expected_date: string;
+  qty_ordered: string; qty_received: string; qty_open: string; unit_price: string; amount: string;
+}
+
+export interface QtyFigures { on_hand: string; reserved: string; qc_hold: string; available: string }
+export interface ItemHistory extends ItemDetail {
+  stock_status: "OK" | "LOW" | "OUT";
+  below_min: boolean;
+  quantities: {
+    organization: string; on_hand: string; receiving_inbound: string; qc_hold: string; uom_name: string; category: string | null;
+    subinventories: (QtyFigures & { code: string; name: string; locators: (QtyFigures & { code: string; rack: string; bin: string })[] })[];
+  };
+  purchase: {
+    lines: PurchaseLine[]; count: number; total_ordered: string; total_received: string; open_qty: string; total_amount: string;
+    last_price: string | null; avg_price: string | null; min_price: string | null; max_price: string | null; suppliers: string[];
+  };
+  movement_summary: {
+    count: number; first_at: string | null; opening: string; received: string; issued: string; returned: string;
+    adjusted_in: string; adjusted_out: string; transferred: string; last_receipt: Movement | null; last_issue: Movement | null;
+  };
+  movements: Movement[];
+  reservations: { ref_doc_type: string; ref_doc_no: string; location: string; qty_open: string; created_at: string }[];
+  sales_orders: { so_id: number; so_number: string; customer: string; status: string; quantity: string; qty_issued: string; forecast_date: string | null }[];
+  requisitions: { number: string; kind: string; quantity: string; status: string; required_date: string | null; created_at: string }[];
+  work_orders: { number: string; quantity: string; qty_completed: string; status: string; required_date: string | null }[];
+  machines: { machine_id: number; code: string; name: string; qty_per_machine: string; sop_stock: string }[];
+}
+
 export interface Requisition {
   id: number; number: string; kind: "PURCHASE" | "PRODUCTION"; item_id: number; item_code: string; item_name: string; uom: string;
   quantity: string; required_date: string | null; status: string; so_number: string | null; so_line_id: number | null;

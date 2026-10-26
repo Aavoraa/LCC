@@ -1,8 +1,8 @@
 "use client";
 
-import { CheckCircle2, CircleAlert } from "lucide-react";
+import { CheckCircle2, CircleAlert, Mic } from "lucide-react";
 import Link from "next/link";
-import { Badge, Card, CardHeader, EmptyState, PageHeader, Spinner, StockBadge, Td, Th } from "@/components/ui";
+import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, Spinner, StockBadge, Td, Th } from "@/components/ui";
 import { money, qty } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { itemTypeLabel, type ItemRow } from "@/lib/types";
@@ -18,7 +18,8 @@ export default function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Reports & analytics" description="Live operational reports from the ledger. Financial registers, ageing and GL reports arrive with the Accounts module (Phase 6–7)." />
+      <PageHeader title="Reports & analytics" description="Live operational reports from the ledger. Financial registers, ageing and GL reports arrive with the Accounts module (Phase 6–7)."
+        actions={<Link href="/reports/voice"><Button icon={<Mic className="size-4" />}>Voice stock report</Button></Link>} />
       <div className="grid gap-5 xl:grid-cols-2">
         <Card>
           <CardHeader title="Ledger reconciliation" subtitle="Balance projection re-derived from every stock movement" />

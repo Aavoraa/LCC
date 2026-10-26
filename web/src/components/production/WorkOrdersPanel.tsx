@@ -1,6 +1,7 @@
 "use client";
 
-import { Building2, CheckCircle2, Factory, Hammer, PackagePlus, Play, Plus, Send, ShieldCheck, ShieldX, Square, Undo2, XCircle } from "lucide-react";
+import { Building2, CheckCircle2, Factory, FileText, Hammer, PackagePlus, Play, Plus, Send, ShieldCheck, ShieldX, Square, Undo2, XCircle } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -19,13 +20,17 @@ interface WoBrief {
 }
 interface Op {
   seq: number; operation: string; work_center: string | null; mode: "IN_HOUSE" | "OUTSIDE"; setup_min: string; run_min: string;
-  outside_days: number; status: string; supplier: { id: number; name: string } | null; challan_no: string | null; rework_count: number;
+  outside_days: number; status: string; supplier: { id: number; name: string } | null; challan_no: string | null; challan_id: number | null; rework_count: number;
   started_at: string | null; done_at: string | null; done_by: string | null; qc_at: string | null; qc_by: string | null; qc_note: string | null;
 }
 interface WoDetail extends WoBrief {
   notes: string | null; started_at: string | null;
   estimate: { in_house_hours: string; in_house_days: number; outside_days: number; total_days: number } | null;
   ops: Op[]; movements: { number: string; type: string; item_code: string; item_name: string; quantity: string; created_at: string }[];
+}
+interface SendForm {
+  seq: number; supplier: string; challan: string; process_nature: string; po_number: string; po_date: string;
+  vehicle_no: string; transporter: string; waybill_no: string; expected_return_date: string;
 }
 interface OpenReq { id: number; number: string; item_code: string; item_name: string; uom: string; quantity: string; required_date: string | null; so_number: string | null }
 
@@ -145,7 +150,7 @@ function WorkOrderView({ id, onChanged }: { id: number; onChanged: () => void })
   const sups = useApi<Supplier[]>("/api/masters/suppliers");
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [send, setSend] = useState<{ seq: number; supplier: string; challan: string } | null>(null);
+  const [send, setSend] = useState<SendForm | null>(null);
   const [fail, setFail] = useState<{ seq: number; note: string } | null>(null);
   const [mat, setMat] = useState<{ item: ItemRow | null; q: string; loc: string }>({ item: null, q: "", loc: "" });
   const [done, setDone] = useState<{ q: string; loc: string; cost: string } | null>(null);
@@ -202,7 +207,10 @@ function WorkOrderView({ id, onChanged }: { id: number; onChanged: () => void })
                     <p className="text-xs text-muted">
                       {o.work_center ?? "—"}
                       {o.mode === "IN_HOUSE" ? ` · ${Number(o.setup_min)} min setup + ${Number(o.run_min)} min/${w.uom.toLowerCase()}` : ` · ${o.outside_days} days at vendor`}
-                      {o.supplier && ` · ${o.supplier.name}`}{o.challan_no && ` · challan ${o.challan_no}`}
+                      {o.supplier && ` · ${o.supplier.name}`}
+                      {o.challan_no && <> · challan {o.challan_id
+                        ? <Link href={`/production/challans/${o.challan_id}`} className="inline-flex items-center gap-0.5 font-medium text-primary"><FileText className="size-3" />{o.challan_no}</Link>
+                        : o.challan_no}</>}
                     </p>
                     {(o.done_at || o.qc_at || o.rework_count > 0) && (
                       <p className="mt-0.5 text-[11px] text-muted">
@@ -221,7 +229,11 @@ function WorkOrderView({ id, onChanged }: { id: number; onChanged: () => void })
                         {can("production.manage") && o.mode === "IN_HOUSE" && o.status === "IN_PROGRESS" &&
                           <Button size="sm" icon={<Square className="size-3.5" />} loading={busy === `finish${o.seq}`} onClick={() => op(o.seq, "finish")}>Finish</Button>}
                         {can("production.manage") && o.mode === "OUTSIDE" && o.status === "PENDING" &&
-                          <Button size="sm" icon={<Send className="size-3.5" />} onClick={() => setSend({ seq: o.seq, supplier: String(o.supplier?.id ?? ""), challan: "" })}>Send to vendor</Button>}
+                          <Button size="sm" icon={<Send className="size-3.5" />} onClick={() => setSend({
+                            seq: o.seq, supplier: String(o.supplier?.id ?? ""), challan: "", process_nature: o.operation.toUpperCase(), po_number: "", po_date: "",
+                            vehicle_no: "", transporter: "", waybill_no: "",
+                            expected_return_date: o.outside_days ? new Date(Date.now() + o.outside_days * 864e5).toISOString().slice(0, 10) : "",
+                          })}>Send to vendor</Button>}
                         {can("production.manage") && o.mode === "OUTSIDE" && o.status === "AT_VENDOR" &&
                           <Button size="sm" icon={<Undo2 className="size-3.5" />} loading={busy === `receive${o.seq}`} onClick={() => op(o.seq, "receive")}>Receive back</Button>}
                         {can("qc.hold") && o.status === "DONE" && <>
@@ -274,14 +286,32 @@ function WorkOrderView({ id, onChanged }: { id: number; onChanged: () => void })
       )}
 
       {send && (
-        <Modal open onClose={() => setSend(null)} title={`Send step ${send.seq} to job-work vendor`}
+        <Modal open onClose={() => setSend(null)} title={`Send step ${send.seq} to job-work vendor`} width="max-w-2xl"
           footer={<><Button variant="secondary" onClick={() => setSend(null)}>Cancel</Button>
-            <Button loading={busy === `send${send.seq}`} disabled={!send.supplier || !send.challan.trim()} onClick={async () => {
-              if (await op(send.seq, "send", { supplier_id: Number(send.supplier), challan_no: send.challan })) setSend(null);
-            }}>Send</Button></>}>
-          <Field label="Vendor" required><Select value={send.supplier} onChange={(e) => setSend({ ...send, supplier: e.target.value })}>
-            <option value="">Select…</option>{sups.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>
-          <Field label="Delivery challan no." required className="mt-3"><Input value={send.challan} onChange={(e) => setSend({ ...send, challan: e.target.value })} placeholder="DC-…" /></Field>
+            <Button loading={busy === `send${send.seq}`} disabled={!send.supplier || !send.process_nature.trim()} icon={<Send className="size-4" />} onClick={async () => {
+              const opt = (v: string) => v.trim() || undefined;
+              if (await op(send.seq, "send", {
+                supplier_id: Number(send.supplier), challan_no: opt(send.challan),
+                challan: { process_nature: send.process_nature, po_number: opt(send.po_number), po_date: opt(send.po_date), vehicle_no: opt(send.vehicle_no),
+                  transporter: opt(send.transporter), waybill_no: opt(send.waybill_no), expected_return_date: opt(send.expected_return_date) },
+              })) setSend(null);
+            }}>Send &amp; raise challan</Button></>}>
+          <p className="mb-3 text-sm text-muted">
+            Raises a delivery challan (job work) for the open quantity, {qty(Number(w.quantity) - Number(w.qty_completed))} {w.uom}. The material stays in WIP until it comes back.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Vendor (consignee)" required className="sm:col-span-2"><Select value={send.supplier} onChange={(e) => setSend({ ...send, supplier: e.target.value })}>
+              <option value="">Select…</option>{sups.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>
+            <Field label="Process nature" required><Input value={send.process_nature} onChange={(e) => setSend({ ...send, process_nature: e.target.value.toUpperCase() })} placeholder="HARDENING AND TEMPERING" /></Field>
+            <Field label="Challan no." hint="Blank = next number, e.g. U4-26-27/0650"><Input value={send.challan} onChange={(e) => setSend({ ...send, challan: e.target.value })} /></Field>
+            <Field label="Job-work PO no."><Input value={send.po_number} onChange={(e) => setSend({ ...send, po_number: e.target.value })} placeholder="174637" /></Field>
+            <Field label="PO date"><Input type="date" value={send.po_date} onChange={(e) => setSend({ ...send, po_date: e.target.value })} /></Field>
+            <Field label="Vehicle number"><Input value={send.vehicle_no} onChange={(e) => setSend({ ...send, vehicle_no: e.target.value.toUpperCase() })} placeholder="TN 66 AK 5769" /></Field>
+            <Field label="Transporter"><Input value={send.transporter} onChange={(e) => setSend({ ...send, transporter: e.target.value })} /></Field>
+            <Field label="Waybill / e-way bill no."><Input value={send.waybill_no} onChange={(e) => setSend({ ...send, waybill_no: e.target.value })} /></Field>
+            <Field label="Expected back by"><Input type="date" value={send.expected_return_date} onChange={(e) => setSend({ ...send, expected_return_date: e.target.value })} /></Field>
+          </div>
+          <p className="mt-3 text-xs text-muted">Vehicle, transporter and waybill can still be filled in on the challan before printing.</p>
         </Modal>
       )}
       {fail && (

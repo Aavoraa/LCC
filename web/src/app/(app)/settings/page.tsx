@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { Alert, Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Spinner, Td, Th } from "@/components/ui";
+import { Alert, Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Spinner, Td, Textarea, Th } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useApi } from "@/lib/hooks";
@@ -58,6 +58,7 @@ export default function SettingsPage() {
             </table>
           )}
         </Card>
+        <CompanyCard editable={can("users.manage")} />
         <Card className="overflow-hidden xl:col-span-2">
           <CardHeader title="Role permissions" />
           {!roles.data ? <Spinner /> : (
@@ -74,6 +75,40 @@ export default function SettingsPage() {
       </div>
       {newUser && <NewUser roles={roles.data ?? []} onClose={() => setNewUser(false)} onDone={users.reload} />}
     </>
+  );
+}
+
+function CompanyCard({ editable }: { editable: boolean }) {
+  const company = useApi<{ profile: Record<string, string>; fields: Record<string, string> }>("/api/masters/company");
+  const [f, setF] = useState<Record<string, string> | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const data = company.data;
+  const form = f ?? data?.profile;
+  const changed = data && f ? Object.keys(f).filter((k) => f[k] !== data.profile[k]) : [];
+  return (
+    <Card className="overflow-hidden xl:col-span-2">
+      <CardHeader title="Company & unit profile" subtitle="Printed on job-work delivery challans; the unit code prefixes challan numbers (U4-26-27/0001)"
+        actions={editable && <Button size="sm" loading={busy} disabled={!changed.length} onClick={async () => {
+          setBusy(true); setMsg(null);
+          try {
+            await api("/api/masters/company", { method: "PUT", json: Object.fromEntries(changed.map((k) => [k, f![k]])) });
+            setF(null); company.reload(); setMsg({ ok: true, text: "Company profile saved" });
+          } catch (e) { setMsg({ ok: false, text: (e as ApiError).message }); } finally { setBusy(false); }
+        }}>Save</Button>} />
+      {!data || !form ? <Spinner /> : (
+        <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+          {msg && <div className="sm:col-span-2 lg:col-span-3"><Alert tone={msg.ok ? "success" : "danger"}>{msg.text}</Alert></div>}
+          {Object.entries(data.fields).map(([k, label]) => (
+            <Field key={k} label={label} className={k === "name" ? "sm:col-span-2" : undefined}>
+              {k === "address" || k === "regd_office"
+                ? <Textarea rows={2} value={form[k] ?? ""} disabled={!editable} onChange={(e) => setF({ ...form, [k]: e.target.value })} />
+                : <Input value={form[k] ?? ""} disabled={!editable} onChange={(e) => setF({ ...form, [k]: k === "unit_code" ? e.target.value.toUpperCase() : e.target.value })} />}
+            </Field>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 

@@ -36,7 +36,7 @@ ZERO = Decimal("0")
 Q4 = Decimal("0.0001")
 
 # Documents an issue may be raised against (spec §5).
-ISSUE_REF_TYPES = {"SALES_ORDER", "PURCHASE_ORDER", "PAD", "WIP", "ASSEMBLY_REQUEST", "REQUISITION"}
+ISSUE_REF_TYPES = {"SALES_ORDER", "PURCHASE_ORDER", "PAD", "WIP", "ASSEMBLY_REQUEST", "REQUISITION", "SUPPLIER_RETURN"}
 
 MOVEMENT_PERMISSION = {
     MovementType.RECEIPT: "stock.receive",

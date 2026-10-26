@@ -110,6 +110,16 @@ web app to review spares, adjust SOP stock, run the Stores check and
 raise purchase requisitions for shortages.
 
 
+INVOICE SCANNER (AI EXTRACTION)
+-------------------------------
+Finance -> Invoice Scanner: upload PDFs or photograph invoices, delivery
+challans and production reports; AI reads the fields for review.
+To switch the AI on, add your Anthropic API key to backend\.env:
+   ANTHROPIC_API_KEY=sk-ant-...
+then restart the API. Without a key, documents are still stored and the
+fields can be typed in by hand. Each extraction is a paid API call.
+
+
 RUN THE TESTS
 -------------
    cd backend

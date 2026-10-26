@@ -122,7 +122,25 @@ def create_holiday(body: HolidayIn, db: Session = Depends(get_db), user: User = 
 
 @router.get("/settings")
 def list_settings(db: Session = Depends(get_db), _: User = Depends(VIEW)):
-    return [{"key": s.key, "value": s.value, "description": s.description} for s in db.scalars(select(Setting).order_by(Setting.key))]
+    return [{"key": s.key, "value": s.value, "description": s.description}
+            for s in db.scalars(select(Setting).where(Setting.key.not_like("company.%")).order_by(Setting.key))]
+
+
+@router.get("/company")
+def get_company(db: Session = Depends(get_db), _: User = Depends(VIEW)):
+    """Company / unit profile printed on challans; ``fields`` gives each field's label."""
+    from ..services.company import COMPANY_FIELDS, company_profile
+
+    return {"profile": company_profile(db), "fields": {k: label for k, (_, label) in COMPANY_FIELDS.items()}}
+
+
+@router.put("/company")
+def update_company(body: dict[str, str], db: Session = Depends(get_db), user: User = Depends(require_permission("users.manage"))):
+    from ..services.company import update_company_profile
+
+    update_company_profile(db, user, body)
+    db.commit()
+    return get_company(db, user)
 
 
 class SettingIn(BaseModel):
@@ -132,7 +150,7 @@ class SettingIn(BaseModel):
 @router.put("/settings/{key}")
 def update_setting(key: str, body: SettingIn, db: Session = Depends(get_db), user: User = Depends(require_permission("users.manage"))):
     s = db.get(Setting, key)
-    if s is None:
+    if s is None or key.startswith("company."):
         raise HTTPException(404, "Unknown setting")
     try:
         float(body.value)

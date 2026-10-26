@@ -163,12 +163,12 @@ function CreatePO({ suppliers, onClose, onDone }: { suppliers: Supplier[]; onClo
 }
 
 function CreateSupplier({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [f, setF] = useState({ name: "", gstin: "", phone: "", email: "", lead_time_days: "14" });
+  const [f, setF] = useState({ name: "", gstin: "", address: "", phone: "", email: "", lead_time_days: "14" });
   const [err, setErr] = useState<string | null>(null);
   return (
     <Modal open onClose={onClose} title="New supplier" footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={f.name.length < 2} onClick={async () => {
       try {
-        await api("/api/masters/suppliers", { method: "POST", json: { ...f, gstin: f.gstin || null, phone: f.phone || null, email: f.email || null, lead_time_days: Number(f.lead_time_days) } });
+        await api("/api/masters/suppliers", { method: "POST", json: { ...f, gstin: f.gstin || null, address: f.address.trim() || null, phone: f.phone || null, email: f.email || null, lead_time_days: Number(f.lead_time_days) } });
         onDone(); onClose();
       } catch (e) { setErr((e as ApiError).message); }
     }}>Save</Button></>}>
@@ -177,6 +177,9 @@ function CreateSupplier({ onClose, onDone }: { onClose: () => void; onDone: () =
         <Field label="Name" required className="sm:col-span-2"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
         <Field label="GSTIN" hint="15 characters"><Input value={f.gstin} onChange={(e) => setF({ ...f, gstin: e.target.value.toUpperCase() })} maxLength={15} /></Field>
         <Field label="Lead time (days)"><Input type="number" min={0} value={f.lead_time_days} onChange={(e) => setF({ ...f, lead_time_days: e.target.value })} /></Field>
+        <Field label="Address" hint="Printed as consignee on job-work challans" className="sm:col-span-2">
+          <Textarea rows={2} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+        </Field>
         <Field label="Phone"><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
         <Field label="Email"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
       </div>

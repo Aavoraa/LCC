@@ -13,7 +13,7 @@ import { ITEM_TYPES, type Category, type ItemDetail, type Location, type Supplie
 interface Dup { item_id: number; item_code: string; name: string; make_model: string | null; score: number; reason: string }
 
 const EMPTY = {
-  name: "", description: "", item_type: "PURCHASED_ITEM", category_id: "", subcategory_id: "", uom_id: "", manufacturer: "", supplier_id: "",
+  item_code: "", name: "", description: "", item_type: "PURCHASED_ITEM", category_id: "", subcategory_id: "", uom_id: "", manufacturer: "", supplier_id: "",
   make_model: "", specifications: "", min_stock: "0", reorder_level: "0", max_stock: "0", restock_order_qty: "0", default_location_id: "", tracking: "NONE",
   valuation_method: "WEIGHTED_AVERAGE", hsn_code: "", gst_rate: "", purchase_lead_days: "", production_lead_days: "0", opening_qty: "", opening_unit_cost: "",
 };
@@ -57,7 +57,7 @@ export default function NewItemPage() {
       const res = await api<ItemDetail>("/api/items", {
         method: "POST",
         json: {
-          name: f.name, description: num(f.description), item_type: f.item_type, category_id: int(f.category_id), subcategory_id: int(f.subcategory_id),
+          item_code: num(f.item_code), name: f.name, description: num(f.description), item_type: f.item_type, category_id: int(f.category_id), subcategory_id: int(f.subcategory_id),
           uom_id: Number(f.uom_id), manufacturer: num(f.manufacturer), supplier_id: int(f.supplier_id), make_model: num(f.make_model),
           specifications: num(f.specifications), min_stock: f.min_stock || "0", reorder_level: f.reorder_level || "0", max_stock: f.max_stock || "0", restock_order_qty: f.restock_order_qty || "0",
           default_location_id: int(f.default_location_id), tracking: f.tracking, valuation_method: f.valuation_method, hsn_code: num(f.hsn_code),
@@ -106,14 +106,17 @@ export default function NewItemPage() {
 
   return (
     <form onSubmit={submit}>
-      <PageHeader title="Add new item" description="An item code and QR label are generated automatically on save."
+      <PageHeader title="Add new item" description="A QR label is generated on save. Keep your existing item number (e.g. Oracle M502940160), or leave it blank for the next code."
         actions={<><Link href="/inventory"><Button type="button" variant="secondary">Cancel</Button></Link><Button type="submit" loading={busy}>Save item & generate QR</Button></>} />
       {error && <div className="mb-4"><Alert title="Could not save">{error}</Alert></div>}
       <div className="grid gap-5 xl:grid-cols-3">
         <div className="space-y-5 xl:col-span-2">
           <Card>
-            <CardHeader title="Identity" subtitle="Item code is assigned from the item-type sequence and never changes." />
+            <CardHeader title="Identity" subtitle="The item code never changes once saved." />
             <div className="grid gap-4 p-4 sm:grid-cols-2">
+              <Field label="Item number" hint="Existing / Oracle item no. — blank assigns the next PI-, RM-… code" className="sm:col-span-2">
+                <Input value={f.item_code} onChange={(e) => setF({ ...f, item_code: e.target.value.toUpperCase() })} maxLength={32} placeholder="e.g. M502940160 or A401112106" className="font-mono" />
+              </Field>
               <Field label="Item name" required className="sm:col-span-2"><Input value={f.name} onChange={set("name")} required minLength={2} placeholder="e.g. Deep Groove Ball Bearing 6205-2RS" /></Field>
               <Field label="Item type" required>
                 <Select value={f.item_type} onChange={set("item_type")}>{ITEM_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</Select>

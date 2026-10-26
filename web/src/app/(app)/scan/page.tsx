@@ -24,7 +24,7 @@ const TXNS: { key: Txn; label: string; perm: string; hint: string }[] = [
   { key: "ADJUST", label: "Adjustment", perm: "stock.adjust.request", hint: "Request a correction (needs approval)" },
 ];
 const REF_TYPES = [["SALES_ORDER", "Sales order"], ["PURCHASE_ORDER", "Purchase order"], ["PAD", "PAD"], ["WIP", "WIP"],
-  ["ASSEMBLY_REQUEST", "Assembly request"], ["REQUISITION", "Internal requisition"]];
+  ["ASSEMBLY_REQUEST", "Assembly request"], ["REQUISITION", "Internal requisition"], ["SUPPLIER_RETURN", "Return to supplier"]];
 
 export default function ScanPage() {
   return <Suspense><Scan /></Suspense>;

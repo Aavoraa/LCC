@@ -7,6 +7,7 @@ python-multipart>=0.0.9
 PyJWT>=2.8
 segno>=1.6
 openpyxl>=3.1
+anthropic>=2.3  # invoice scanner: Claude vision extraction (needs ANTHROPIC_API_KEY)
 psycopg[binary]>=3.1  # PostgreSQL driver for production
 pytest>=8
 httpx>=0.27

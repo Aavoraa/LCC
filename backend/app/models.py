@@ -22,6 +22,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     Table,
@@ -797,3 +798,144 @@ class WorkOrderOp(Base):
     qc_note: Mapped[str | None] = mapped_column(Text)
     work_order: Mapped[WorkOrder] = relationship(back_populates="ops")
     supplier: Mapped[Supplier | None] = relationship(lazy="joined")
+
+
+# ---------------------------------------------------------------- outside processing (job-work delivery challans)
+class JobWorkChallan(Base):
+    """Delivery challan (job work) for a work order's OUTSIDE step: material goes to a job-work vendor for a process
+    (e.g. hardening and tempering) and comes back. Numbered per unit and financial year, e.g. ``U4-26-27/0649``."""
+
+    __tablename__ = "job_work_challans"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(32), unique=True)
+    challan_date: Mapped[date] = mapped_column(Date, index=True)
+    supplier_id: Mapped[int] = mapped_column(ForeignKey("suppliers.id"), index=True)
+    work_order_id: Mapped[int | None] = mapped_column(ForeignKey("work_orders.id"), index=True)
+    op_seq: Mapped[int | None] = mapped_column(Integer)
+    process_nature: Mapped[str] = mapped_column(String(120))
+    po_number: Mapped[str | None] = mapped_column(String(32), index=True)  # job-work (OSP) purchase order to the vendor
+    po_date: Mapped[date | None] = mapped_column(Date)
+    vehicle_no: Mapped[str | None] = mapped_column(String(20))
+    transporter: Mapped[str | None] = mapped_column(String(120))
+    waybill_no: Mapped[str | None] = mapped_column(String(64))  # e-way bill
+    expected_return_date: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(16), default="SENT")  # SENT, RECEIVED
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    supplier: Mapped[Supplier] = relationship(lazy="joined")
+    work_order: Mapped[WorkOrder | None] = relationship(lazy="joined")
+    lines: Mapped[list["JobWorkChallanLine"]] = relationship(back_populates="challan", cascade="all, delete-orphan",
+                                                              order_by="JobWorkChallanLine.line_no", lazy="selectin")
+
+
+class JobWorkChallanLine(Base):
+    __tablename__ = "job_work_challan_lines"
+    __table_args__ = (UniqueConstraint("challan_id", "line_no"), CheckConstraint("quantity > 0", name="ck_jwc_line_qty"))
+    id: Mapped[int] = mapped_column(primary_key=True)
+    challan_id: Mapped[int] = mapped_column(ForeignKey("job_work_challans.id", ondelete="CASCADE"), index=True)
+    line_no: Mapped[int] = mapped_column(Integer)
+    item_id: Mapped[int | None] = mapped_column(ForeignKey("items.id"), index=True)
+    description: Mapped[str] = mapped_column(String(200))
+    hsn_code: Mapped[str | None] = mapped_column(String(16))
+    quantity: Mapped[Decimal] = mapped_column(Qty)
+    uom: Mapped[str] = mapped_column(String(16))
+    rate: Mapped[Decimal] = mapped_column(Money, default=0)
+    value: Mapped[Decimal] = mapped_column(Money, default=0)
+    qty_received: Mapped[Decimal] = mapped_column(Qty, default=0)
+    challan: Mapped[JobWorkChallan] = relationship(back_populates="lines")
+    item: Mapped[Item | None] = relationship(lazy="joined")
+
+
+# ---------------------------------------------------------------- cycle counts
+class CycleCount(Base):
+    """Physical count of the items at a set of locations. Counted quantities that differ from the ledger become stock
+    adjustment requests, which a different user approves (maker-checker)."""
+
+    __tablename__ = "cycle_counts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(32), unique=True)
+    scope: Mapped[str] = mapped_column(String(64))  # location code filter the count was raised for, e.g. MAIN-R01
+    due_date: Mapped[date] = mapped_column(Date, index=True)
+    status: Mapped[str] = mapped_column(String(16), default="OPEN")  # OPEN, SUBMITTED, CANCELLED
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    submitted_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lines: Mapped[list["CycleCountLine"]] = relationship(back_populates="count", cascade="all, delete-orphan",
+                                                          order_by="CycleCountLine.id", lazy="selectin")
+
+
+class CycleCountLine(Base):
+    __tablename__ = "cycle_count_lines"
+    __table_args__ = (UniqueConstraint("count_id", "item_id", "location_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    count_id: Mapped[int] = mapped_column(ForeignKey("cycle_counts.id", ondelete="CASCADE"), index=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id"))
+    location_id: Mapped[int] = mapped_column(ForeignKey("locations.id"))
+    system_qty: Mapped[Decimal | None] = mapped_column(Qty)  # ledger quantity, recorded when the count is submitted
+    counted_qty: Mapped[Decimal | None] = mapped_column(Qty)
+    counted_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    counted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    adjustment_id: Mapped[int | None] = mapped_column(ForeignKey("stock_adjustment_requests.id"))
+    count: Mapped[CycleCount] = relationship(back_populates="lines")
+    item: Mapped[Item] = relationship(lazy="joined")
+    location: Mapped[Location] = relationship(lazy="joined")
+
+
+# ---------------------------------------------------------------- scanned documents (invoice scanner & AI extraction)
+class ScannedDocument(Base):
+    """An uploaded / photographed business document (supplier invoice, delivery challan, production report …) with the
+    fields extracted from it. ``extraction`` is what the model read; ``data`` is the reviewed version a person
+    corrects and approves; ``checks`` are the arithmetic / tax / PO-GRN / duplicate validations on ``data``."""
+
+    __tablename__ = "scanned_documents"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(32), unique=True)
+    doc_type: Mapped[str] = mapped_column(String(24), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="UPLOADED", index=True)  # UPLOADED, EXTRACTED, FAILED, APPROVED, REJECTED
+    title: Mapped[str] = mapped_column(String(255))
+    page_count: Mapped[int] = mapped_column(Integer, default=1)
+    sha256: Mapped[str] = mapped_column(String(64), index=True)
+    extraction: Mapped[dict | None] = mapped_column(JSON)
+    data: Mapped[dict | None] = mapped_column(JSON)
+    checks: Mapped[list | None] = mapped_column(JSON)
+    provider: Mapped[str | None] = mapped_column(String(32))
+    model: Mapped[str | None] = mapped_column(String(64))
+    extracted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    extraction_error: Mapped[str | None] = mapped_column(Text)
+    usage: Mapped[dict | None] = mapped_column(JSON)
+    # Key fields copied out of ``data`` for listing, search and duplicate detection.
+    party_name: Mapped[str | None] = mapped_column(String(200))
+    party_gstin: Mapped[str | None] = mapped_column(String(15), index=True)
+    reference_no: Mapped[str | None] = mapped_column(String(64), index=True)
+    document_date: Mapped[date | None] = mapped_column(Date)
+    total: Mapped[Decimal | None] = mapped_column(Money)
+    supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"))
+    purchase_order_id: Mapped[int | None] = mapped_column(ForeignKey("purchase_orders.id"))
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    reviewed_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_note: Mapped[str | None] = mapped_column(Text)
+    pages: Mapped[list["DocumentPage"]] = relationship(back_populates="document", cascade="all, delete-orphan",
+                                                       order_by="DocumentPage.page_no", lazy="select")
+
+
+class DocumentPage(Base):
+    """One uploaded file of a document (an image per photographed page, or a PDF). Stored in the database so it stays
+    private (served only through the authenticated API) and survives on hosts without a persistent disk."""
+
+    __tablename__ = "document_pages"
+    __table_args__ = (UniqueConstraint("document_id", "page_no"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey("scanned_documents.id", ondelete="CASCADE"), index=True)
+    page_no: Mapped[int] = mapped_column(Integer)
+    filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(64))
+    size: Mapped[int] = mapped_column(Integer)
+    content: Mapped[bytes] = mapped_column(LargeBinary)
+    document: Mapped[ScannedDocument] = relationship(back_populates="pages")

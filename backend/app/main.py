@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from .api import auth, dashboard, imports, items, machines, masters, process, production, sales_orders, sales_purchase, stock  # noqa: F401 (sales_orders registers routes)
+from .api import auth, dashboard, documents, imports, inventory, items, machines, masters, osp, process, production, reports, sales_orders, sales_purchase, stock  # noqa: F401 (sales_orders registers routes)
 from .bootstrap import bootstrap
 from .config import settings
 from .db import engine
@@ -53,5 +53,5 @@ def health():
 
 for r in (auth.router, auth.users_router, items.router, items.qr_router, stock.router, masters.router,
           sales_purchase.sales_router, sales_purchase.purchase_router, imports.router, dashboard.router, machines.router, process.router, production.pad_router, production.wo_router,
-          production.tracker_router):
+          production.tracker_router, reports.router, reports.locator_router, osp.router, inventory.router, documents.router):
     app.include_router(r)

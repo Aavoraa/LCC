@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..deps import require_permission
-from ..models import Item, Pad, PadLine, PurchaseRequisition, SalesOrder, SalesOrderLine, StockMovement, User, WorkOrder
+from ..models import Item, JobWorkChallan, Pad, PadLine, PurchaseRequisition, SalesOrder, SalesOrderLine, StockMovement, User, WorkOrder
 from ..services import process
 from ..services import production as svc
 from .machines import _d, _jsonable
@@ -49,12 +49,13 @@ def wo_out(db: Session, wo: WorkOrder) -> dict:
     users = {u.id: u.full_name for u in db.scalars(select(User))}
     moves = db.scalars(select(StockMovement).where(StockMovement.ref_doc_type == "WIP", StockMovement.ref_doc_no == wo.number)
                        .order_by(StockMovement.id)).all()
+    challans = {c.number: c.id for c in db.scalars(select(JobWorkChallan).where(JobWorkChallan.work_order_id == wo.id))}
     return _jsonable({
         **_wo_brief(wo), "notes": wo.notes, "started_at": wo.started_at, "estimate": est,
         "ops": [{"seq": o.seq, "operation": o.operation, "work_center": o.work_center, "mode": o.mode,
                  "setup_min": _d(o.setup_min), "run_min": _d(o.run_min), "outside_days": o.outside_days, "status": o.status,
                  "supplier": {"id": o.supplier.id, "name": o.supplier.name} if o.supplier else None,
-                 "challan_no": o.challan_no, "rework_count": o.rework_count, "started_at": o.started_at, "done_at": o.done_at,
+                 "challan_no": o.challan_no, "challan_id": challans.get(o.challan_no), "rework_count": o.rework_count, "started_at": o.started_at, "done_at": o.done_at,
                  "done_by": users.get(o.done_by_id), "qc_at": o.qc_at, "qc_by": users.get(o.qc_by_id), "qc_note": o.qc_note}
                 for o in wo.ops],
         "movements": [{"number": m.number, "type": m.movement_type.value, "item_id": m.item_id,
@@ -197,10 +198,23 @@ class WorkOrderIn(BaseModel):
     notes: str | None = Field(default=None, max_length=1000)
 
 
+class ChallanDetailsIn(BaseModel):
+    challan_date: date | None = None
+    process_nature: str | None = Field(default=None, max_length=120)
+    po_number: str | None = Field(default=None, max_length=32)
+    po_date: date | None = None
+    vehicle_no: str | None = Field(default=None, max_length=20)
+    transporter: str | None = Field(default=None, max_length=120)
+    waybill_no: str | None = Field(default=None, max_length=64)
+    expected_return_date: date | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+
+
 class OpActionIn(BaseModel):
     action: str = Field(pattern="^(start|finish|send|receive|qc)$")
     supplier_id: int | None = None
-    challan_no: str | None = Field(default=None, max_length=64)
+    challan_no: str | None = Field(default=None, max_length=32)  # blank: numbered automatically, e.g. U4-26-27/0650
+    challan: ChallanDetailsIn | None = None
     passed: bool | None = None
     note: str | None = Field(default=None, max_length=500)
 
@@ -263,7 +277,8 @@ def op_action(wo_id: int, seq: int, body: OpActionIn, db: Session = Depends(get_
     if needed not in user.permission_codes:
         raise HTTPException(403, f"Missing permission: {needed}")
     wo = _wo(db, wo_id)
-    svc.op_action(db, user, wo, seq, body.action, supplier_id=body.supplier_id, challan_no=body.challan_no, passed=body.passed, note=body.note)
+    svc.op_action(db, user, wo, seq, body.action, supplier_id=body.supplier_id, challan_no=body.challan_no, passed=body.passed, note=body.note,
+                  challan=body.challan.model_dump(exclude_none=True) if body.challan else None)
     db.commit()
     return wo_out(db, wo)
 

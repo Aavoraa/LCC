@@ -6,7 +6,7 @@ import secrets
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..models import ITEM_TYPE_PREFIX, Item, ItemType, QrCode, QrStatus, User
@@ -126,10 +126,16 @@ def create_item(db: Session, user: User, data: dict, *, allow_duplicate: bool = 
     if min(levels) < 0:
         raise BusinessError("Stock levels cannot be negative")
 
-    while True:  # skip numbers already taken by preserved legacy codes
-        code = next_number(db, f"item.{item_type.value}", f"{ITEM_TYPE_PREFIX[item_type]}-")
-        if not db.scalar(select(Item.id).where(Item.item_code == code)):
-            break
+    own_code = (data.pop("item_code", None) or "").strip().upper()
+    if own_code:  # the item number from the existing system (e.g. Oracle M502940160) is kept as the item code
+        if db.scalar(select(Item.id).where(func.upper(Item.item_code) == own_code)):
+            raise BusinessError(f"Item code {own_code} already exists", status_code=409, code="duplicate")
+        code = own_code
+    else:
+        while True:  # skip numbers already taken by preserved legacy codes
+            code = next_number(db, f"item.{item_type.value}", f"{ITEM_TYPE_PREFIX[item_type]}-")
+            if not db.scalar(select(Item.id).where(Item.item_code == code)):
+                break
     item = Item(item_code=code, name=data["name"].strip(), name_normalized=normalize_name(data["name"]),
                 created_by_id=user.id, **{k: v for k, v in data.items() if k not in {"name", "item_type"}})
     item.item_type = item_type

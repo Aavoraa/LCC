@@ -146,6 +146,8 @@ class ItemIn(BaseModel):
 
 
 class ItemCreateIn(ItemIn):
+    item_code: str | None = Field(default=None, max_length=32, pattern=r"^\s*[A-Za-z0-9][A-Za-z0-9./_-]*\s*$",
+                                  description="Keep the existing item number (e.g. Oracle M502940160); blank = next PI-/RM-… code")
     allow_duplicate: bool = False
     opening_qty: Decimal | None = Field(default=None, gt=0)
     opening_unit_cost: Decimal | None = Field(default=None, ge=0)
