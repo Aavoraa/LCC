@@ -6,7 +6,7 @@ import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, PageHeader, Sk
 import { MovementBadge } from "@/components/MovementBadge";
 import { useAuth } from "@/lib/auth";
 import { compactMoney, dateFmt, dateTime, isInbound, isOutbound, qty } from "@/lib/format";
-import { useApi } from "@/lib/hooks";
+import { useApi, useLocalState } from "@/lib/hooks";
 import type { Movement } from "@/lib/types";
 
 interface Summary {
@@ -20,6 +20,7 @@ interface Summary {
   qc_hold_qty: string;
   available_qty: string;
   movements_14d: { date: string; in: number; out: number }[];
+  movements_days?: number;
   recent_movements: Movement[];
   pending_adjustments: number;
   pending_import_approvals: number;
@@ -42,7 +43,8 @@ interface ChallanRow { id: number; number: string; supplier: { name: string }; e
 
 export default function DashboardPage() {
   const { user, can } = useAuth();
-  const { data: raw, error, loading, reload } = useApi<Summary>(can("dashboard.view") ? "/api/dashboard/summary" : null, { pollMs: 15000 });
+  const [days, setDays] = useLocalState<number>("lm_dash_days", 14);
+  const { data: raw, error, loading, reload } = useApi<Summary>(can("dashboard.view") ? `/api/dashboard/summary?days=${days}` : null, { pollMs: 15000 });
   const alerts = useApi<Alerts>(can("items.view") ? "/api/items/restock-alerts?limit=5" : null, { pollMs: 60000 });
   const wos = useApi<WoBrief[]>(can("production.view") ? "/api/work-orders" : null, { pollMs: 60000 });
   const atVendor = useApi<ChallanRow[]>(can("production.view") ? "/api/osp/challans?status=SENT" : null, { pollMs: 60000 });
@@ -65,12 +67,19 @@ export default function DashboardPage() {
         title="Executive dashboard"
         description={d ? <>Good {greeting()}, {user?.full_name.split(" ")[0]} · live from the stock ledger, updated {dateTime(d.generated_at)}</> : "Loading live figures…"}
         actions={<>
-          <span className="hidden h-10 items-center gap-2 rounded-lg border border-line bg-surface px-3.5 text-[13px] font-semibold text-ink sm:inline-flex"><CalendarDays className="size-4" aria-hidden /> Last 14 days</span>
+          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-line-strong bg-surface pl-3.5 pr-2 text-[13px] font-semibold text-ink shadow-card hover:bg-surface-2 focus-within:ring-2 focus-within:ring-primary/20">
+            <CalendarDays className="size-4" aria-hidden />
+            <span className="sr-only">Chart period</span>
+            <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="cursor-pointer bg-transparent pr-1 font-semibold outline-none">
+              {[7, 14, 30, 90].map((n) => <option key={n} value={n}>Last {n} days</option>)}
+            </select>
+            {loading && raw && <RefreshCw className="size-3.5 animate-spin text-muted" aria-label="Updating" />}
+          </label>
           <Button variant="secondary" icon={<RefreshCw className="size-4" />} onClick={reload}>Refresh</Button>
           {can("stock.receive", "stock.issue") && <Link href="/scan"><Button icon={<Plus className="size-4" />}>New transaction</Button></Link>}
         </>}
       />
-      {loading || !d ? (
+      {!d ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[168px] rounded-2xl" />)}</div>
       ) : (
         <div className="space-y-5">
@@ -106,7 +115,7 @@ export default function DashboardPage() {
 
           <div className="grid gap-5 xl:grid-cols-3">
             <Card className="xl:col-span-2">
-              <CardHeader title="Stock movements" subtitle="Receipts and issues posted per day"
+              <CardHeader title="Stock movements" subtitle={`Receipts and issues posted per day · last ${d.movements_days ?? d.movements_14d.length} days`}
                 actions={<div className="flex gap-4 text-xs text-ink-2">
                   <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-primary" /> Receipts</span>
                   <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-accent" /> Issues</span>
@@ -167,26 +176,31 @@ function MovementChart({ data }: { data: Summary["movements_14d"] }) {
   const top = Math.max(4, Math.ceil(peak / 4) * 4);
   const ticks = [top, (top * 3) / 4, top / 2, top / 4, 0];
   const total = data.reduce((a, x) => a + x.in + x.out, 0);
+  const every = data.length > 31 ? 15 : data.length > 14 ? 5 : 1;  // keep date labels legible on long periods
   return (
     <div className="px-5 pb-5 pt-4">
       <div className="flex gap-3">
         <div className="flex h-56 flex-col justify-between pb-6 text-[11px] text-muted" aria-hidden>{ticks.map((t) => <span key={t} className="tabular">{t}</span>)}</div>
         <div className="min-w-0 flex-1">
-          <div className="relative flex items-end justify-between gap-1.5 border-b border-line" style={{ height: 200 }}
-               role="img" aria-label={`Bar chart: ${total} stock movements in the last 14 days, receipts and issues per day`}>
+          <div className={cx("relative flex items-end justify-between border-b border-line", data.length > 31 ? "gap-px" : data.length > 14 ? "gap-0.5" : "gap-1.5")} style={{ height: 200 }}
+               role="img" aria-label={`Bar chart: ${total} stock movements in the last ${data.length} days, receipts and issues per day`}>
             {ticks.slice(0, 4).map((t, i) => <span key={t} className="pointer-events-none absolute inset-x-0 border-t border-surface-3" style={{ top: `${i * 25}%` }} aria-hidden />)}
             {data.map((x) => (
-              <div key={x.date} className="group relative flex h-full flex-1 items-end justify-center gap-[3px]">
-                <div className="w-[42%] max-w-3.5 rounded-t bg-primary" style={{ height: `${(x.in / top) * 100}%`, minHeight: x.in ? 3 : 0 }} />
-                <div className="w-[42%] max-w-3.5 rounded-t bg-accent" style={{ height: `${(x.out / top) * 100}%`, minHeight: x.out ? 3 : 0 }} />
+              <div key={x.date} className={cx("group relative flex h-full flex-1 items-end justify-center", data.length > 31 ? "gap-0" : "gap-[3px]")}>
+                <div className="w-[42%] max-w-3.5 rounded-t-sm bg-primary" style={{ height: `${(x.in / top) * 100}%`, minHeight: x.in ? 3 : 0 }} />
+                <div className="w-[42%] max-w-3.5 rounded-t-sm bg-accent" style={{ height: `${(x.out / top) * 100}%`, minHeight: x.out ? 3 : 0 }} />
                 <span className="pointer-events-none absolute -top-7 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-navy px-2 py-0.5 text-[11px] text-white group-hover:block">
-                  {x.in} in · {x.out} out
+                  {dateFmt(x.date)}: {x.in} in · {x.out} out
                 </span>
               </div>
             ))}
           </div>
-          <div className="mt-2 flex justify-between gap-1.5">
-            {data.map((x) => <span key={x.date} className="flex-1 text-center text-[11px] text-muted">{new Date(`${x.date}T00:00:00`).getDate()}</span>)}
+          <div className="mt-2 flex justify-between">
+            {data.map((x, i) => (
+              <span key={x.date} className="flex-1 text-center text-[11px] text-muted">
+                {i % every === 0 || i === data.length - 1 ? new Date(`${x.date}T00:00:00`).toLocaleDateString("en-IN", data.length > 14 ? { day: "numeric", month: "short" } : { day: "numeric" }) : ""}
+              </span>
+            ))}
           </div>
         </div>
       </div>

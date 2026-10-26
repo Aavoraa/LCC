@@ -82,3 +82,12 @@ def test_locator_history_covers_purchases_and_movements(as_user, make_item, refs
     assert ms["last_receipt"]["ref_doc_no"] == po["number"]
     assert [m["movement_type"] for m in h["movements"]] == ["ISSUE", "RECEIPT"]
     assert as_user("sales").get(f"/api/locator/items/{item_id}").status_code == 200  # every role can view stock
+
+
+def test_dashboard_movement_series_follows_the_chosen_period(as_user):
+    manager = as_user("manager")
+    for days in (7, 14, 30, 90):
+        d = manager.get("/api/dashboard/summary", params={"days": days}).json()
+        assert d["movements_days"] == days and len(d["movements_14d"]) == days
+    assert len(manager.get("/api/dashboard/summary").json()["movements_14d"]) == 14  # default unchanged
+    assert manager.get("/api/dashboard/summary", params={"days": 365}).status_code == 422

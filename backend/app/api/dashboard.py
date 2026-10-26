@@ -42,7 +42,8 @@ def _d(v) -> str:
 
 
 @router.get("/dashboard/summary")
-def summary(db: Session = Depends(get_db), _: User = Depends(require_permission("dashboard.view"))):
+def summary(days: int = Query(14, ge=7, le=90, description="Days in the stock-movement series"),
+            db: Session = Depends(get_db), _: User = Depends(require_permission("dashboard.view"))):
     per_item = (
         select(
             Item.id, Item.item_type, Item.reorder_level, Item.avg_cost,
@@ -72,9 +73,9 @@ def summary(db: Session = Depends(get_db), _: User = Depends(require_permission(
         elif oh - res - qc <= Decimal(rol or 0):
             low += 1
 
-    since = datetime.now(timezone.utc) - timedelta(days=13)
+    since = datetime.now(timezone.utc) - timedelta(days=days - 1)
     daily: dict[str, dict[str, int]] = {}
-    for d in range(14):
+    for d in range(days):
         key = (since + timedelta(days=d)).date().isoformat()
         daily[key] = {"in": 0, "out": 0}
     for mtype, created in db.execute(select(StockMovement.movement_type, StockMovement.created_at).where(StockMovement.created_at >= since.replace(hour=0, minute=0, second=0))):
@@ -112,7 +113,8 @@ def summary(db: Session = Depends(get_db), _: User = Depends(require_permission(
         "qc_hold_qty": _d(qc_total),
         "available_qty": _d(on_hand_total - reserved_total - qc_total),
         "valuation_by_type": {k: _d(v) for k, v in by_type.items()},
-        "movements_14d": [{"date": k, **v} for k, v in daily.items()],
+        "movements_days": days,
+        "movements_14d": [{"date": k, **v} for k, v in daily.items()],  # name kept for older clients; holds `days` entries
         "recent_movements": [movement_out(m).model_dump(mode="json") for m in recent],
         "pending_adjustments": pending_adj,
         "pending_import_approvals": pending_imports,
