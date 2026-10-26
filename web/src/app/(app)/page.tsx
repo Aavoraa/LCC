@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Boxes, CalendarDays, ClipboardList, FileText, IndianRupee, Plus, RefreshCw, ShoppingCart, TrendingUp, Truck } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, PageHeader, Skeleton, Stat, Td, Th, cx } from "@/components/ui";
 import { MovementBadge } from "@/components/MovementBadge";
 import { useAuth } from "@/lib/auth";
@@ -44,11 +45,30 @@ interface ChallanRow { id: number; number: string; supplier: { name: string }; e
 export default function DashboardPage() {
   const { user, can } = useAuth();
   const [days, setDays] = useLocalState<number>("lm_dash_days", 14);
-  const { data: raw, error, loading, reload } = useApi<Summary>(can("dashboard.view") ? `/api/dashboard/summary?days=${days}` : null, { pollMs: 15000 });
+  const { data: raw, error, loading, fetching, reload: reloadSummary } = useApi<Summary>(can("dashboard.view") ? `/api/dashboard/summary?days=${days}` : null, { pollMs: 15000 });
   const alerts = useApi<Alerts>(can("items.view") ? "/api/items/restock-alerts?limit=5" : null, { pollMs: 60000 });
   const wos = useApi<WoBrief[]>(can("production.view") ? "/api/work-orders" : null, { pollMs: 60000 });
   const atVendor = useApi<ChallanRow[]>(can("production.view") ? "/api/osp/challans?status=SENT" : null, { pollMs: 60000 });
   const toReview = useApi<{ id: number }[]>(can("stock.view") ? "/api/documents?status=EXTRACTED" : null, { pollMs: 60000 });
+
+  // The spinner follows a click only (the dashboard also polls itself): at least a moment, then until every card has reloaded.
+  const anyFetching = fetching || alerts.fetching || wos.fetching || atVendor.fetching || toReview.fetching;
+  const [pressed, setPressed] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  useEffect(() => {
+    if (waiting && !pressed && !anyFetching) setWaiting(false);
+  }, [waiting, pressed, anyFetching]);
+  const refreshing = pressed || (waiting && anyFetching);
+  const reload = () => {
+    setPressed(true);
+    setWaiting(true);
+    window.setTimeout(() => setPressed(false), 700);
+    reloadSummary();
+    alerts.reload();
+    wos.reload();
+    atVendor.reload();
+    toReview.reload();
+  };
 
   if (!can("dashboard.view")) return <EmptyState title="No dashboard access" description="Use the sidebar to open the modules assigned to your role." />;
   if (error) return <ErrorState error={error} onRetry={reload} />;
@@ -75,7 +95,8 @@ export default function DashboardPage() {
             </select>
             {loading && raw && <RefreshCw className="size-3.5 animate-spin text-muted" aria-label="Updating" />}
           </label>
-          <Button variant="secondary" icon={<RefreshCw className="size-4" />} onClick={reload}>Refresh</Button>
+          <Button variant="secondary" icon={<RefreshCw className={cx("size-4", refreshing && "animate-spin")} />} onClick={reload} disabled={refreshing}
+                  aria-busy={refreshing}>{refreshing ? "Refreshing…" : "Refresh"}</Button>
           {can("stock.receive", "stock.issue") && <Link href="/scan"><Button icon={<Plus className="size-4" />}>New transaction</Button></Link>}
         </>}
       />
