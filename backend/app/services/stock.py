@@ -72,7 +72,8 @@ def _q(value: Decimal) -> Decimal:
 
 def _lock_balance(db: Session, item_id: int, location_id: int) -> StockBalance:
     stmt = select(StockBalance).where(StockBalance.item_id == item_id, StockBalance.location_id == location_id)
-    stmt = stmt.with_for_update()
+    # Lock only the balance row: the eager-loaded location is an outer join, which Postgres cannot lock (FOR UPDATE OF).
+    stmt = stmt.with_for_update(of=StockBalance)
     bal = db.scalar(stmt)
     if bal is None:
         bal = StockBalance(item_id=item_id, location_id=location_id, qty_on_hand=ZERO, qty_reserved=ZERO, qty_qc_hold=ZERO)
@@ -171,7 +172,7 @@ def post_movement(db: Session, user: User, data: MovementInput, *, _internal: bo
                 select(Reservation).where(Reservation.ref_doc_type == "SALES_ORDER", Reservation.ref_doc_no == so.number,
                                           Reservation.item_id == item.id, Reservation.location_id == data.from_location_id,
                                           Reservation.status == "ACTIVE")
-                .order_by(Reservation.id).with_for_update()))
+                .order_by(Reservation.id).with_for_update(of=Reservation)))
     own_open = sum((r.qty_open for r in own_reservations), ZERO)
 
     # ---- balance projection (locked)
@@ -298,7 +299,7 @@ def reserve(db: Session, user: User, *, item_id: int, quantity: Decimal, ref_doc
     One reservation row per ``key_prefix`` + location (``idempotency_key``)."""
     if quantity <= 0:
         return ZERO
-    balances = list(db.scalars(select(StockBalance).where(StockBalance.item_id == item_id).order_by(StockBalance.id).with_for_update()))
+    balances = list(db.scalars(select(StockBalance).where(StockBalance.item_id == item_id).order_by(StockBalance.id).with_for_update(of=StockBalance)))
     # Allocation order: the item's default location first, then the location with most free stock.
     balances.sort(key=lambda b: (b.location_id != preferred_location_id, -b.qty_available, b.id))
     remaining = Decimal(quantity)
