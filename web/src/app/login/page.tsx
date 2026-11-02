@@ -48,7 +48,7 @@ function Login() {
     }
   }
 
-  const field = "flex h-[52px] items-center gap-2.5 rounded-xl border border-line-strong bg-surface px-3.5 shadow-card focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15";
+  const field = "flex h-12 items-center gap-2.5 rounded-xl border border-line-strong bg-surface-2 px-3.5 transition-colors focus-within:bg-surface focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15";
 
   return (
     <div className="app-backdrop grid min-h-screen lg:grid-cols-2">
@@ -85,52 +85,60 @@ function Login() {
         <p className="relative text-xs leading-relaxed text-navy-text/80">S.R.K.V. Post, Perianaickenpalayam, Coimbatore · Authorised personnel only — all activity is audited.</p>
       </section>
 
-      <section className="flex items-center justify-center px-6 py-12 sm:px-8">
-        <form onSubmit={submit} className="w-full max-w-[420px] space-y-5">
-          <div className="mb-2 flex items-center gap-3 lg:hidden">
+      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-10 sm:px-8">
+        <svg viewBox="0 0 800 140" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-0 h-28 w-full lg:hidden" aria-hidden>
+          <path d="M0 95 C 220 50, 480 80, 800 20 L800 140 L0 140 Z" fill="var(--brand)" opacity="0.9" />
+          <path d="M0 118 C 240 85, 500 108, 800 62 L800 140 L0 140 Z" fill="var(--primary)" />
+        </svg>
+        <form onSubmit={submit} className="relative w-full max-w-[440px] rounded-3xl border border-line/70 bg-surface p-7 shadow-pop sm:p-9">
+          <div className="flex flex-col items-center text-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/lakshmi-logo.png" alt="Lakshmi" className="h-11 w-auto rounded-lg dark:bg-white dark:p-1" />
-            <div><p className="font-extrabold text-navy dark:text-white">Lakshmi ERP</p><p className="text-xs text-muted">Card Clothing · Unit 4</p></div>
+            <img src="/brand/lakshmi-logo.png" alt="Lakshmi" className="h-16 w-auto rounded-lg dark:bg-white dark:p-1.5" />
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">Lakshmi ERP · Unit 4</p>
+            <h2 className="mt-5 text-[28px] font-extrabold leading-tight tracking-tight text-ink">Welcome back</h2>
+            <p className="mt-1.5 text-sm text-muted">Sign in with your ERP account to continue.</p>
           </div>
-          <div>
-            <h2 className="border-l-4 border-brand pl-3 text-3xl font-extrabold tracking-tight">Sign in</h2>
-            <p className="mt-2 text-[15px] text-muted">Use your ERP account to continue.</p>
+
+          <div className="mt-7 space-y-4">
+            {error && <Alert>{error}</Alert>}
+            <label className="block space-y-1.5">
+              <span className="text-[13px] font-semibold text-ink-2">Username</span>
+              <span className={field}>
+                <User className="size-[18px] text-muted" aria-hidden />
+                <input autoFocus autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required
+                       placeholder="e.g. admin" className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-muted/60" />
+              </span>
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-[13px] font-semibold text-ink-2">Password</span>
+              <span className={`${field} pr-1.5`}>
+                <Lock className="size-[18px] text-muted" aria-hidden />
+                <input type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                       placeholder="Enter your password" className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-muted/60" />
+                <button type="button" onClick={() => setShow(!show)} aria-label={show ? "Hide password" : "Show password"}
+                        className="grid size-9 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-ink">
+                  {show ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+                </button>
+              </span>
+            </label>
+            <Button type="submit" loading={busy} className="!mt-6 h-12 w-full text-[15px] font-bold" size="lg">
+              Sign in {!busy && <ArrowRight className="size-[18px]" aria-hidden />}
+            </Button>
           </div>
-          {error && <Alert>{error}</Alert>}
-          <label className="block space-y-2">
-            <span className="text-sm font-semibold text-ink-2">Username</span>
-            <span className={field}>
-              <User className="size-[18px] text-muted" aria-hidden />
-              <input autoFocus autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required
-                     className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none" />
-            </span>
-          </label>
-          <label className="block space-y-2">
-            <span className="text-sm font-semibold text-ink-2">Password</span>
-            <span className={`${field} pr-1.5`}>
-              <Lock className="size-[18px] text-muted" aria-hidden />
-              <input type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required
-                     className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none" />
-              <button type="button" onClick={() => setShow(!show)} aria-label={show ? "Hide password" : "Show password"}
-                      className="grid size-10 place-items-center rounded-lg bg-surface-3 text-ink-2 hover:text-ink">
-                {show ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
-              </button>
-            </span>
-          </label>
-          <Button type="submit" loading={busy} className="h-[52px] w-full text-base font-bold" size="lg">
-            Sign in {!busy && <ArrowRight className="size-[18px]" aria-hidden />}
-          </Button>
-          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3.5">
-            <ShieldCheck className="size-5 shrink-0 text-teal" aria-hidden />
-            <span className="text-[13px] leading-relaxed text-ink-2">No account yet, or forgot your password? Your administrator manages logins under <b>Users, roles &amp; settings</b>.</span>
-          </div>
-          <p className="flex flex-wrap justify-between gap-2 pt-1 text-xs text-muted">
-            <span>© Lakshmi Card Clothing Mfg. Co. Pvt. Ltd.</span>
-            <a href="/downloads/LCC-Stores.apk" download className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
-              <Smartphone className="size-3.5" aria-hidden /> Android app (APK)
-            </a>
+
+          <p className="mt-6 flex items-start gap-2.5 rounded-xl bg-surface-2 px-3.5 py-3 text-xs leading-relaxed text-muted">
+            <ShieldCheck className="mt-px size-4 shrink-0 text-success" aria-hidden />
+            <span>Forgot your password or need an account? Ask your administrator — logins are managed in <b className="font-semibold text-ink-2">Users, roles &amp; settings</b>.</span>
           </p>
         </form>
+
+        <div className="relative mt-6 flex w-full max-w-[440px] flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted">
+          <span>© Lakshmi Card Clothing Mfg. Co. Pvt. Ltd.</span>
+          <a href="/downloads/LCC-Stores.apk" download
+             className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 font-semibold text-primary shadow-card hover:bg-primary-soft">
+            <Smartphone className="size-3.5" aria-hidden /> Android app
+          </a>
+        </div>
       </section>
     </div>
   );
