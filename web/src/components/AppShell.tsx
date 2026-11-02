@@ -104,27 +104,32 @@ function Shell({ children }: { children: React.ReactNode }) {
   const company = useApi<{ profile: Record<string, string> }>("/api/masters/company");
 
   const sidebar = (
-    <nav aria-label="Main" className="flex h-full flex-col border-r border-line bg-surface text-ink-2">
-      <div className={cx("flex h-16 items-center gap-3 px-4", collapsed && "lg:justify-center lg:px-0")}>
-        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-navy text-[13px] font-extrabold tracking-wide text-white">LCC</div>
-        <div className={cx("min-w-0 flex-1 leading-tight", collapsed && "lg:hidden")}>
-          <p className="truncate text-[15px] font-extrabold text-navy dark:text-white">Lakshmi ERP</p>
+    <nav aria-label="Main" className="relative flex h-full flex-col overflow-hidden border-r border-line/70 bg-surface text-ink-2 shadow-[4px_0_24px_-16px_rgb(16_42_102/0.25)]">
+      <div className={cx("relative flex flex-col items-center px-4 pb-3 pt-5 text-center", collapsed && "lg:px-2 lg:pt-4")}>
+        <Link href="/" aria-label="Lakshmi ERP home" className={cx("rounded-lg dark:bg-white dark:px-2 dark:py-1", collapsed && "lg:dark:p-1")}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/lakshmi-logo.png" alt="Lakshmi" className={cx("h-14 w-auto", collapsed && "lg:h-7")} />
+        </Link>
+        <div className={cx("mt-2.5 min-w-0 leading-tight", collapsed && "lg:hidden")}>
+          <p className="truncate text-[15px] font-extrabold text-ink">Lakshmi ERP</p>
           <p className="truncate text-xs text-muted">Card Clothing · {company.data?.profile.unit_name ?? "Unit"}</p>
         </div>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden size-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-ink lg:grid"
+          className={cx("absolute right-2 top-2 hidden size-7 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-ink lg:grid",
+                        collapsed && "lg:static lg:mt-2")}
           aria-label={collapsed ? "Expand sidebar" : "Minimize sidebar"}
           title={collapsed ? "Expand sidebar" : "Minimize sidebar"}
         >
           {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
         </button>
       </div>
-      <div className={cx("mx-3 mb-2 flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2 text-[13px] text-ink", collapsed && "lg:hidden")}>
+      <div className={cx("mx-4 mb-3 flex items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-2 text-[13px] font-medium text-ink shadow-card", collapsed && "lg:hidden")}>
         <span className="size-2 rounded-full bg-success" aria-hidden />
-        <span className="truncate">Organisation {company.data?.profile.unit_code ?? "—"}</span>
+        <span className="flex-1 truncate">Organisation {company.data?.profile.unit_code ?? "—"}</span>
+        <ChevronDown className="size-3.5 text-muted" aria-hidden />
       </div>
-      <div className="flex-1 overflow-y-auto px-3 py-2">
+      <div className="flex-1 overflow-y-auto px-3 pb-3 pt-1">
         {nav.map((section) => {
           const sectionClosed = closedSections.includes(section.section);
           return (
@@ -132,7 +137,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => toggleSection(section.section)}
               aria-expanded={!sectionClosed}
-              className={cx("mb-1 flex w-full items-center justify-between rounded px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-muted hover:text-ink", collapsed && "lg:hidden")}
+              className={cx("mb-1 flex w-full items-center justify-between rounded px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-wider text-muted hover:text-ink", collapsed && "lg:hidden")}
             >
               {section.section}
               <ChevronDown className={cx("size-3.5 transition-transform", sectionClosed && "-rotate-90")} aria-hidden />
@@ -147,11 +152,11 @@ function Shell({ children }: { children: React.ReactNode }) {
                   aria-current={active ? "page" : undefined}
                   className={cx(
                     "group mb-0.5 flex h-10 items-center gap-3 rounded-xl px-2.5 text-sm transition-colors",
-                    active ? "bg-nav-active font-semibold text-white" : "font-medium text-ink-2 hover:bg-surface-3 hover:text-ink",
+                    active ? "bg-nav-active font-semibold text-white shadow-[0_8px_18px_-8px_rgb(31_79_196/0.65)]" : "font-medium text-ink-2 hover:bg-primary-soft hover:text-primary",
                     collapsed && "lg:justify-center",
                   )}
                 >
-                  <item.icon className={cx("size-[18px] shrink-0", active ? "text-white" : "text-muted group-hover:text-ink")} aria-hidden />
+                  <item.icon className={cx("size-[18px] shrink-0", active ? "text-white" : "text-ink-2/70 group-hover:text-primary")} aria-hidden />
                   <span className={cx("flex-1 truncate", collapsed && "lg:hidden")}>{item.label}</span>
                   {item.planned && <span className={cx("rounded-full bg-surface-3 px-2 text-[10px] font-semibold text-muted", collapsed && "lg:hidden")}>{item.planned}</span>}
                 </Link>
@@ -161,11 +166,12 @@ function Shell({ children }: { children: React.ReactNode }) {
           );
         })}
       </div>
+      <BrandSwoosh />
     </nav>
   );
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="app-backdrop flex h-screen overflow-hidden">
       <aside className={cx("no-print hidden shrink-0 transition-[width] lg:block", collapsed ? "w-[72px]" : "w-64")}>{sidebar}</aside>
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -174,39 +180,39 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print flex h-16 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 sm:px-6">
-          <button className="grid size-10 place-items-center rounded-xl text-muted hover:bg-surface-3 lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+        <header className="no-print flex h-[76px] shrink-0 items-center gap-2.5 px-3 sm:px-6 lg:px-8">
+          <button className="grid size-10 place-items-center rounded-full bg-surface text-muted shadow-card hover:bg-surface-2 lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu className="size-5" />
           </button>
           <button
             onClick={() => setPaletteOpen(true)}
-            className="hidden h-11 w-full max-w-[520px] items-center gap-2.5 rounded-xl border border-line bg-surface-2 px-3.5 text-sm text-muted hover:border-line-strong sm:flex"
+            className="hidden h-12 w-full max-w-[520px] items-center gap-3 rounded-full border border-line/70 bg-surface px-5 text-sm text-muted shadow-card hover:border-line-strong sm:flex"
           >
             <Search className="size-[18px]" /> <span className="flex-1 truncate text-left">Search items, codes, POs, challans…</span>
             <Kbd>Ctrl K</Kbd>
           </button>
           <div className="flex-1" />
-          <button onClick={() => setPaletteOpen(true)} className="grid size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3 sm:hidden" aria-label="Search">
+          <button onClick={() => setPaletteOpen(true)} className="grid size-10 place-items-center rounded-full border border-line/70 bg-surface text-ink shadow-card hover:bg-surface-2 sm:hidden" aria-label="Search">
             <Search className="size-[18px]" />
           </button>
           {can("items.view") && (
-            <Link href="/scan" className="hidden size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3 sm:grid" aria-label="Scan a QR code" title="Scan & transact">
+            <Link href="/scan" className="hidden size-10 place-items-center rounded-full border border-line/70 bg-surface text-ink shadow-card hover:bg-surface-2 sm:grid" aria-label="Scan a QR code" title="Scan & transact">
               <ScanLine className="size-[18px]" />
             </Link>
           )}
           <QuickCreate />
           <Notifications />
-          <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="grid size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3"
+          <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="grid size-10 place-items-center rounded-full border border-line/70 bg-surface text-ink shadow-card hover:bg-surface-2"
                   aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}>
             {theme === "dark" ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
           </button>
-          <button onClick={() => setHelpOpen(true)} className="hidden size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3 md:grid" aria-label="Help and keyboard shortcuts">
+          <button onClick={() => setHelpOpen(true)} className="hidden size-10 place-items-center rounded-full border border-line/70 bg-surface text-ink shadow-card hover:bg-surface-2 md:grid" aria-label="Help and keyboard shortcuts">
             <CircleHelp className="size-[18px]" />
           </button>
           <UserMenu name={user!.full_name} role={user!.roles.map((r) => r.name).join(", ")} onLogout={logout} />
         </header>
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1480px] px-4 pb-24 pt-5 sm:px-6 lg:py-7">{children}</div>
+          <div className="mx-auto w-full max-w-[1480px] px-4 pb-24 pt-3 sm:px-6 lg:px-8 lg:pb-8 lg:pt-4">{children}</div>
         </main>
         <TabBar />
       </div>
@@ -224,6 +230,17 @@ function Shell({ children }: { children: React.ReactNode }) {
         </p>
       </Modal>
     </div>
+  );
+}
+
+/** Red and blue sails sweeping across the bottom of the sidebar, echoing the Lakshmi logo. */
+function BrandSwoosh() {
+  return (
+    <svg viewBox="0 0 256 90" preserveAspectRatio="none" className="pointer-events-none block h-14 w-full shrink-0" aria-hidden>
+      <path d="M0 58 C 70 30, 150 40, 256 6 L256 90 L0 90 Z" fill="var(--brand)" opacity="0.92" />
+      <path d="M0 74 C 80 50, 170 64, 256 30 L256 90 L0 90 Z" fill="var(--primary)" />
+      <path d="M0 84 C 90 70, 180 80, 256 58 L256 90 L0 90 Z" fill="var(--navy)" opacity="0.55" />
+    </svg>
   );
 }
 
@@ -273,12 +290,12 @@ function QuickCreate() {
   if (!items.length) return null;
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="flex h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-bold text-white hover:bg-primary-hover"
+      <button onClick={() => setOpen(!open)} className="flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-bold text-white shadow-[0_8px_18px_-8px_rgb(31_79_196/0.6)] hover:bg-primary-hover"
               aria-haspopup="menu" aria-expanded={open}>
         <Plus className="size-4" /> <span className="hidden sm:inline">Create</span>
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-11 z-30 w-52 rounded-lg border border-line bg-surface p-1 shadow-pop">
+        <div role="menu" className="absolute right-0 top-11 z-30 w-52 rounded-2xl border border-line bg-surface p-1.5 shadow-pop">
           {items.map((q) => (
             <Link key={q.href + q.label} href={q.href} onClick={close} role="menuitem"
                   className="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-ink-2 hover:bg-surface-3 hover:text-ink">
@@ -299,12 +316,12 @@ function Notifications() {
   const unread = data?.filter((n) => !n.is_read).length ?? 0;
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="relative grid size-10 place-items-center rounded-xl border border-line text-ink hover:bg-surface-3" aria-label={`Notifications, ${unread} unread`}>
+      <button onClick={() => setOpen(!open)} className="relative grid size-10 place-items-center rounded-full border border-line/70 bg-surface text-ink shadow-card hover:bg-surface-2" aria-label={`Notifications, ${unread} unread`}>
         <Bell className="size-[18px]" />
-        {unread > 0 && <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full border-2 border-surface bg-accent px-1 text-[10px] font-bold text-white">{unread > 9 ? "9+" : unread}</span>}
+        {unread > 0 && <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full border-2 border-surface bg-brand px-1 text-[10px] font-bold text-white">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 top-11 z-30 w-[340px] max-w-[calc(100vw-24px)] rounded-lg border border-line bg-surface shadow-pop">
+        <div className="absolute right-0 top-11 z-30 w-[340px] max-w-[calc(100vw-24px)] rounded-2xl border border-line bg-surface shadow-pop">
           <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
             <p className="text-sm font-semibold">Notifications & tasks</p>
             <button onClick={close} aria-label="Close" className="text-muted"><X className="size-4" /></button>
@@ -336,8 +353,8 @@ function UserMenu({ name, role, onLogout }: { name: string; role: string; onLogo
   const initials = name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2.5 rounded-xl py-1 pl-1 pr-2 hover:bg-surface-3" aria-haspopup="menu" aria-expanded={open}>
-        <span className="grid size-9 place-items-center rounded-full bg-primary-soft text-[13px] font-bold text-navy dark:text-primary">{initials}</span>
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 hover:bg-surface/80" aria-haspopup="menu" aria-expanded={open}>
+        <span className="grid size-10 place-items-center rounded-full bg-primary-soft text-[13px] font-extrabold text-primary ring-2 ring-surface">{initials}</span>
         <span className="hidden text-left leading-tight xl:block">
           <span className="block text-sm font-semibold text-ink">{name}</span>
           <span className="block max-w-36 truncate text-[11px] text-muted">{role}</span>
@@ -345,7 +362,7 @@ function UserMenu({ name, role, onLogout }: { name: string; role: string; onLogo
         <ChevronDown className="hidden size-3.5 text-muted xl:block" />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-11 z-30 w-56 rounded-lg border border-line bg-surface p-1 shadow-pop">
+        <div role="menu" className="absolute right-0 top-11 z-30 w-56 rounded-2xl border border-line bg-surface p-1.5 shadow-pop">
           <div className="border-b border-line px-3 py-2">
             <p className="text-sm font-medium">{name}</p>
             <p className="text-xs text-muted">{role}</p>

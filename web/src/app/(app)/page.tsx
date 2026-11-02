@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Boxes, CalendarDays, ClipboardList, FileText, IndianRupee, Plus, RefreshCw, ShoppingCart, TrendingUp, Truck } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Box, CalendarDays, ClipboardList, Database, FileText, Plus, RefreshCw, ShoppingBag, ShoppingCart, Truck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, PageHeader, Skeleton, Stat, Td, Th, cx } from "@/components/ui";
@@ -84,10 +84,10 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="Executive dashboard"
+        title="Executive Dashboard"
         description={d ? <>Good {greeting()}, {user?.full_name.split(" ")[0]} · live from the stock ledger, updated {dateTime(d.generated_at)}</> : "Loading live figures…"}
         actions={<>
-          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-line-strong bg-surface pl-3.5 pr-2 text-[13px] font-semibold text-ink shadow-card hover:bg-surface-2 focus-within:ring-2 focus-within:ring-primary/20">
+          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface pl-4 pr-3 text-[13px] font-semibold text-ink shadow-card hover:bg-surface-2 focus-within:ring-2 focus-within:ring-primary/20">
             <CalendarDays className="size-4" aria-hidden />
             <span className="sr-only">Chart period</span>
             <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="cursor-pointer bg-transparent pr-1 font-semibold outline-none">
@@ -97,7 +97,7 @@ export default function DashboardPage() {
           </label>
           <Button variant="secondary" icon={<RefreshCw className={cx("size-4", refreshing && "animate-spin")} />} onClick={reload} disabled={refreshing}
                   aria-busy={refreshing}>{refreshing ? "Refreshing…" : "Refresh"}</Button>
-          {can("stock.receive", "stock.issue") && <Link href="/scan"><Button icon={<Plus className="size-4" />}>New transaction</Button></Link>}
+          {can("stock.receive", "stock.issue") && <Link href="/scan"><Button icon={<Plus className="size-4" />}>New Transaction</Button></Link>}
         </>}
       />
       {!d ? (
@@ -105,16 +105,16 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-5">
           <section aria-label="Key figures" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Inventory value" value={compactMoney(d.inventory_valuation)} tone="primary" icon={<IndianRupee className="size-5" />}
-                  bar={Number(d.stock_on_hand_qty) ? Number(d.available_qty) / Number(d.stock_on_hand_qty) : 0}
+            <Stat label="Inventory Value" value={compactMoney(d.inventory_valuation)} tone="primary" icon={<Database className="size-5" />}
+                  spark={d.movements_14d.map((x) => x.in)} sparkLabel="Receipts posted per day"
                   sub={<>{qty(d.available_qty)} of {qty(d.stock_on_hand_qty)} units free to use</>} />
-            <Stat label="Items in stores" value={d.total_items.toLocaleString("en-IN")} tone="accent" icon={<Boxes className="size-5" />} href="/inventory"
-                  bar={d.total_items ? (d.total_items - d.out_of_stock_items) / d.total_items : 0}
+            <Stat label="Items in Stores" value={d.total_items.toLocaleString("en-IN")} tone="brand" tint icon={<ShoppingCart className="size-5" />} href="/inventory"
+                  spark={d.movements_14d.map((x) => x.out)} sparkLabel="Issues posted per day"
                   sub={<><span className="font-bold text-danger">{d.out_of_stock_items} out of stock</span> · {d.low_stock_items} low</>} />
-            <Stat label="Open purchase orders" value={d.open_purchase_orders} tone="teal" icon={<ShoppingCart className="size-5" />} href="/purchase"
+            <Stat label="Open Purchase Orders" value={d.open_purchase_orders} tone="primary" icon={<ShoppingBag className="size-5" />} href="/purchase"
                   bar={d.open_purchase_orders ? (d.open_purchase_orders - d.purchase_orders_awaiting_approval) / d.open_purchase_orders : 0}
                   sub={<>{d.purchase_orders_awaiting_approval} awaiting approval · {raw?.open_requisitions ?? 0} requisitions open</>} />
-            <Stat label="Open sales orders" value={d.open_sales_orders} tone="violet" icon={<TrendingUp className="size-5" />} href="/sales"
+            <Stat label="Open Sales Orders" value={d.open_sales_orders} tone="primary" icon={<ArrowUpRight className="size-5" />} href="/sales"
                   bar={d.open_sales_orders ? (d.open_sales_orders - d.orders_at_risk) / d.open_sales_orders : 0}
                   sub={d.orders_at_risk > 0 ? <span className="font-bold text-danger">{d.orders_at_risk} at risk of late delivery</span> : <>None at risk · {d.open_enquiries} open enquiries</>} />
           </section>
@@ -136,10 +136,10 @@ export default function DashboardPage() {
 
           <div className="grid gap-5 xl:grid-cols-3">
             <Card className="xl:col-span-2">
-              <CardHeader title="Stock movements" subtitle={`Receipts and issues posted per day · last ${d.movements_days ?? d.movements_14d.length} days`}
+              <CardHeader title="Stock Movements" subtitle={`Receipts and issues posted per day · last ${d.movements_days ?? d.movements_14d.length} days`}
                 actions={<div className="flex gap-4 text-xs text-ink-2">
-                  <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-primary" /> Receipts</span>
-                  <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-accent" /> Issues</span>
+                  <span className="flex items-center gap-1.5 font-semibold"><span className="size-2.5 rounded-full bg-primary" /> Receipts</span>
+                  <span className="flex items-center gap-1.5 font-semibold"><span className="size-2.5 rounded-full bg-brand" /> Issues</span>
                 </div>} />
               <MovementChart data={d.movements_14d} />
             </Card>
@@ -148,7 +148,7 @@ export default function DashboardPage() {
 
           <div className="grid gap-5 xl:grid-cols-3">
             <Card className="overflow-hidden xl:col-span-2">
-              <CardHeader title="Recent stock movements" actions={<Link href="/stock/ledger" className="text-[13px] font-semibold text-primary hover:underline">Stock ledger</Link>} />
+              <CardHeader title="Recent Stock Movements" actions={<Link href="/stock/ledger" className="text-[13px] font-semibold text-primary hover:underline">Stock ledger</Link>} />
               {d.recent_movements.length === 0 ? (
                 <EmptyState title="No transactions yet" description="Scan an item to record the first receipt." action={<Link href="/scan"><Button>Open scanner</Button></Link>} />
               ) : (
@@ -159,8 +159,13 @@ export default function DashboardPage() {
                       {d.recent_movements.map((m) => (
                         <tr key={m.id} className="hover:bg-surface-2">
                           <Td className="py-2.5 pl-5">
-                            <Link href={`/locator?item=${m.item_id}`} className="block font-semibold text-ink hover:text-primary">{m.item_name}</Link>
-                            <span className="font-mono text-[11px] text-muted">{m.item_code}</span>
+                            <span className="flex items-center gap-3">
+                              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Box className="size-[18px]" aria-hidden /></span>
+                              <span className="min-w-0">
+                                <Link href={`/locator?item=${m.item_id}`} className="block font-semibold text-ink hover:text-primary">{m.item_name}</Link>
+                                <span className="font-mono text-[11px] text-muted">{m.item_code}</span>
+                              </span>
+                            </span>
                           </Td>
                           <Td><MovementBadge type={m.movement_type} /></Td>
                           <Td className={cx("tabular text-right font-bold", isInbound(m.movement_type) ? "text-success" : isOutbound(m.movement_type) ? "text-danger" : "text-ink")}>
@@ -208,8 +213,8 @@ function MovementChart({ data }: { data: Summary["movements_14d"] }) {
             {ticks.slice(0, 4).map((t, i) => <span key={t} className="pointer-events-none absolute inset-x-0 border-t border-surface-3" style={{ top: `${i * 25}%` }} aria-hidden />)}
             {data.map((x) => (
               <div key={x.date} className={cx("group relative flex h-full flex-1 items-end justify-center", data.length > 31 ? "gap-0" : "gap-[3px]")}>
-                <div className="w-[42%] max-w-3.5 rounded-t-sm bg-primary" style={{ height: `${(x.in / top) * 100}%`, minHeight: x.in ? 3 : 0 }} />
-                <div className="w-[42%] max-w-3.5 rounded-t-sm bg-accent" style={{ height: `${(x.out / top) * 100}%`, minHeight: x.out ? 3 : 0 }} />
+                <div className="w-[42%] max-w-3.5 rounded-t-md bg-primary" style={{ height: `${(x.in / top) * 100}%`, minHeight: x.in ? 3 : 0 }} />
+                <div className="w-[42%] max-w-3.5 rounded-t-md bg-brand" style={{ height: `${(x.out / top) * 100}%`, minHeight: x.out ? 3 : 0 }} />
                 <span className="pointer-events-none absolute -top-7 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-navy px-2 py-0.5 text-[11px] text-white group-hover:block">
                   {dateFmt(x.date)}: {x.in} in · {x.out} out
                 </span>
@@ -233,14 +238,16 @@ function RestockCard({ alerts }: { alerts: Alerts | undefined }) {
   const rows = alerts ? [...alerts.out.map((r) => ({ ...r, out: true })), ...alerts.below_min.map((r) => ({ ...r, out: false }))].slice(0, 5) : [];
   return (
     <Card className="flex flex-col">
-      <CardHeader title="Restock alerts" actions={<Link href="/inventory?status=MIN" className="text-[13px] font-semibold text-primary hover:underline">View all</Link>} />
+      <CardHeader title="Restock Alerts" actions={<Link href="/inventory?status=MIN" className="text-[13px] font-semibold text-primary hover:underline">View all</Link>} />
       <div className="flex flex-1 flex-col gap-3 px-5 pb-3 pt-4">
         <div className="grid grid-cols-2 gap-2">
-          <Link href="/inventory?status=OUT" className="rounded-xl bg-danger-soft px-3 py-2.5 text-xs font-semibold text-danger">
-            <span className="tabular block text-xl font-extrabold">{alerts?.out_count ?? "—"}</span>Out of stock
+          <Link href="/inventory?status=OUT" className="flex items-center justify-between gap-2 rounded-2xl bg-brand-soft px-4 py-3 text-xs font-semibold text-brand">
+            <span><span className="tabular block text-2xl font-extrabold">{alerts?.out_count ?? "—"}</span>Out of stock</span>
+            <AlertTriangle className="size-7 shrink-0" aria-hidden />
           </Link>
-          <Link href="/inventory?status=MIN" className="rounded-xl bg-warning-soft px-3 py-2.5 text-xs font-semibold text-warning">
-            <span className="tabular block text-xl font-extrabold">{alerts?.below_min_count ?? "—"}</span>At or below minimum
+          <Link href="/inventory?status=MIN" className="flex items-center justify-between gap-2 rounded-2xl bg-primary-soft px-4 py-3 text-xs font-semibold text-primary">
+            <span><span className="tabular block text-2xl font-extrabold">{alerts?.below_min_count ?? "—"}</span>At or below minimum</span>
+            <Box className="size-7 shrink-0" aria-hidden />
           </Link>
         </div>
         {alerts && rows.length === 0 ? <p className="py-6 text-center text-sm text-muted">Nothing to restock.</p> : (
@@ -248,7 +255,7 @@ function RestockCard({ alerts }: { alerts: Alerts | undefined }) {
             {rows.map((r) => (
               <li key={r.id}>
                 <Link href={`/locator?item=${r.id}`} className="flex items-center gap-3 py-2.5">
-                  <span className={cx("size-2.5 shrink-0 rounded-full", r.out ? "bg-danger" : "bg-warning")} aria-hidden />
+                  <span className={cx("size-2.5 shrink-0 rounded-full", r.out ? "bg-brand" : "bg-primary")} aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-semibold text-ink">{r.name}</span>
                     <span className="font-mono text-[11px] text-muted">{r.item_code}{r.location ? ` · ${r.location}` : ""}</span>
@@ -270,19 +277,19 @@ function RestockCard({ alerts }: { alerts: Alerts | undefined }) {
 function ProductionCard({ wos, challans }: { wos: WoBrief[] | undefined; challans: ChallanRow[] | undefined }) {
   const open = (wos ?? []).filter((w) => w.status !== "CANCELLED");
   const groups = [
-    { label: "completed", n: open.filter((w) => w.status === "COMPLETED").length, c: "bg-success" },
+    { label: "completed", n: open.filter((w) => w.status === "COMPLETED").length, c: "bg-line-strong" },
     { label: "partly completed", n: open.filter((w) => w.status !== "COMPLETED" && Number(w.qty_completed) > 0).length, c: "bg-primary" },
     { label: "at job-work vendor", n: open.filter((w) => w.status !== "COMPLETED" && Number(w.qty_completed) === 0 && w.current_step?.status === "AT_VENDOR").length, c: "bg-accent" },
   ];
   const rest = open.length - groups.reduce((a, g) => a + g.n, 0);
-  groups.push({ label: "in progress or not started", n: rest, c: "bg-muted" });
+  groups.push({ label: "in progress or not started", n: rest, c: "bg-brand" });
   const next = challans?.[0];
   return (
     <Card>
       <CardHeader title="Production" actions={<Link href="/production" className="text-[13px] font-semibold text-primary hover:underline">{open.length} work orders</Link>} />
       <div className="space-y-4 px-5 py-4">
         {open.length > 0 && (
-          <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full" aria-hidden>
+          <div className="flex h-3 gap-1 overflow-hidden rounded-full" aria-hidden>
             {groups.filter((g) => g.n).map((g) => <span key={g.label} className={g.c} style={{ flex: `${g.n} 1 0` }} />)}
           </div>
         )}
@@ -316,7 +323,7 @@ function ApprovalsCard({ adjustments, pos, imports, commits, docs, canDocs }: {
   ];
   return (
     <Card>
-      <CardHeader title="Waiting for approval" />
+      <CardHeader title="Waiting for Approval" />
       <ul className="px-5 pb-2">
         {rows.map((r) => (
           <li key={r.label} className="border-t border-surface-3 first:border-0">

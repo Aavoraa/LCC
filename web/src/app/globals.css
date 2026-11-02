@@ -2,20 +2,20 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design tokens — Lakshmi navy and cobalt primary, orange accent, teal success, amber pending, red exceptions. */
+/* Design tokens — Lakshmi royal blue primary and brand red (from the logo), orange accent, teal success, amber pending, red exceptions. */
 :root {
-  --bg: #f4f6fa;
+  --bg: #f3f6fb;
   --surface: #ffffff;
-  --surface-2: #f8fafd;
-  --surface-3: #eef1f6;
-  --border: #e4e8f0;
-  --border-strong: #d5dbe6;
+  --surface-2: #f7f9fd;
+  --surface-3: #eef2f8;
+  --border: #e6ebf3;
+  --border-strong: #d6dde9;
   --text: #0f172a;
   --text-2: #334155;
   --muted: #5b6478;
-  --primary: #1e4fd8;
-  --primary-hover: #1a43b8;
-  --primary-soft: #e8eefc;
+  --primary: #1f4fc4;
+  --primary-hover: #1a43a8;
+  --primary-soft: #e9effc;
   --navy: #12245b;
   --navy-2: #1a3170;
   --navy-text: #c7d2f0;
@@ -26,7 +26,7 @@
   --violet-soft: #f0ebfc;
   --teal: #0e7c70;
   --teal-soft: #e3f6f3;
-  --nav-active: #12245b;
+  --nav-active: #1f4fc4;
   --success: #0f8a6c;
   --success-soft: #e3f5ef;
   --warning: #b45309;
@@ -36,8 +36,10 @@
   --info: #0e7490;
   --info-soft: #e0f3f7;
   --ring: #3b6cf0;
-  --shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 1px rgb(15 23 42 / 0.03);
-  --shadow-lg: 0 12px 32px -8px rgb(15 23 42 / 0.18), 0 2px 6px rgb(15 23 42 / 0.06);
+  --brand: #e3142b;
+  --brand-soft: #fdecee;
+  --shadow: 0 1px 2px rgb(16 42 102 / 0.04), 0 8px 24px -12px rgb(16 42 102 / 0.14);
+  --shadow-lg: 0 18px 40px -12px rgb(16 42 102 / 0.24), 0 2px 6px rgb(16 42 102 / 0.06);
 }
 
 .dark {
@@ -50,8 +52,8 @@
   --text: #e6ebf5;
   --text-2: #c2cbdc;
   --muted: #8c99b3;
-  --primary: #4f7cff;
-  --primary-hover: #6a91ff;
+  --primary: #5b86ff;
+  --primary-hover: #7499ff;
   --primary-soft: #18264d;
   --navy: #0d1a40;
   --navy-2: #15275a;
@@ -63,7 +65,7 @@
   --violet-soft: #241a3d;
   --teal: #3cc3b0;
   --teal-soft: #0f2d29;
-  --nav-active: #2a4bb0;
+  --nav-active: #2f5fd8;
   --success: #2fbf98;
   --success-soft: #0f2d29;
   --warning: #f0a53a;
@@ -73,6 +75,8 @@
   --info: #3cc3dc;
   --info-soft: #0f2a33;
   --ring: #6a91ff;
+  --brand: #ff4b5c;
+  --brand-soft: #3a141b;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-lg: 0 16px 40px -10px rgb(0 0 0 / 0.6);
 }
@@ -101,6 +105,8 @@
   --color-teal: var(--teal);
   --color-teal-soft: var(--teal-soft);
   --color-nav-active: var(--nav-active);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -121,6 +127,20 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Soft red/blue sweep behind the app, as in the Lakshmi brand artwork. */
+.app-backdrop {
+  background:
+    radial-gradient(60rem 22rem at 100% -6rem, rgb(31 79 196 / 0.10), transparent 70%),
+    radial-gradient(28rem 14rem at 78% -5rem, rgb(227 20 43 / 0.08), transparent 70%),
+    var(--bg);
+}
+.dark .app-backdrop {
+  background:
+    radial-gradient(60rem 22rem at 100% -6rem, rgb(91 134 255 / 0.12), transparent 70%),
+    radial-gradient(28rem 14rem at 78% -5rem, rgb(255 75 92 / 0.08), transparent 70%),
+    var(--bg);
 }
 
 :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }

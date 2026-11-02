@@ -10,8 +10,8 @@ export const cx = clsx;
 // ------------------------------------------------------------------ buttons
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-primary text-white hover:bg-primary-hover shadow-card",
-  secondary: "bg-surface text-ink border border-line-strong hover:bg-surface-2 shadow-card",
+  primary: "bg-primary text-white hover:bg-primary-hover shadow-[0_8px_18px_-8px_rgb(31_79_196/0.6)]",
+  secondary: "bg-surface text-ink border border-line hover:bg-surface-2 shadow-card",
   ghost: "text-ink-2 hover:bg-surface-3",
   danger: "bg-danger text-white hover:opacity-90",
   success: "bg-success text-white hover:opacity-90",
@@ -26,9 +26,9 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap",
+        "inline-flex items-center justify-center gap-1.5 rounded-full font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap",
         size === "sm" && "h-8 px-2.5 text-[13px]",
-        size === "md" && "h-10 px-4 text-sm",
+        size === "md" && "h-10 px-5 text-sm",
         size === "lg" && "h-12 px-5 text-base",
         VARIANT[variant],
         className,
@@ -45,7 +45,7 @@ export const Button = forwardRef<
 // Width defaults to full unless the caller passes its own w-* class.
 const width = (className?: string) => (/(^|\s)w-/.test(className ?? "") ? "" : "w-full");
 const control =
-  "rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-3 disabled:text-muted";
+  "rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-3 disabled:text-muted";
 
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input({ className, onWheel, ...p }, ref) {
   return (
@@ -98,7 +98,7 @@ export function Field({ label, hint, error, required, children, className }: {
 // ------------------------------------------------------------------ surfaces
 export function Card({ className, children, ...p }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cx("rounded-2xl border border-line bg-surface shadow-card", className)} {...p}>
+    <div className={cx("rounded-2xl border border-line/70 bg-surface shadow-card", className)} {...p}>
       {children}
     </div>
   );
@@ -106,10 +106,10 @@ export function Card({ className, children, ...p }: React.HTMLAttributes<HTMLDiv
 
 export function CardHeader({ title, subtitle, actions, className }: { title: React.ReactNode; subtitle?: React.ReactNode; actions?: React.ReactNode; className?: string }) {
   return (
-    <div className={cx("flex items-start justify-between gap-3 border-b border-line px-5 py-4", className)}>
-      <div className="min-w-0">
-        <h3 className="text-[15px] font-bold text-ink">{title}</h3>
-        {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
+    <div className={cx("flex items-start justify-between gap-3 px-5 pb-3 pt-5", className)}>
+      <div className="min-w-0 border-l-[3px] border-brand pl-3">
+        <h3 className="text-base font-extrabold leading-5 text-ink">{title}</h3>
+        {subtitle && <p className="mt-1 text-xs text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </div>
@@ -118,10 +118,10 @@ export function CardHeader({ title, subtitle, actions, className }: { title: Rea
 
 export function PageHeader({ title, description, actions }: { title: string; description?: React.ReactNode; actions?: React.ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <div className="border-l-4 border-brand pl-3.5">
+        <h1 className="text-[26px] font-extrabold leading-8 tracking-tight text-ink sm:text-3xl">{title}</h1>
+        {description && <p className="mt-1.5 text-sm text-ink-2/80">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -153,7 +153,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, className }: {
 }
 
 // ------------------------------------------------------------------ status
-type Tone = "neutral" | "primary" | "success" | "warning" | "danger" | "info" | "accent" | "violet" | "teal";
+type Tone = "neutral" | "primary" | "success" | "warning" | "danger" | "info" | "accent" | "violet" | "teal" | "brand";
 const TONE: Record<Tone, string> = {
   neutral: "bg-surface-3 text-ink-2",
   primary: "bg-primary-soft text-primary",
@@ -164,10 +164,15 @@ const TONE: Record<Tone, string> = {
   accent: "bg-accent-soft text-accent-ink",
   violet: "bg-violet-soft text-violet",
   teal: "bg-teal-soft text-teal",
+  brand: "bg-brand-soft text-brand",
 };
 const BAR: Record<Tone, string> = {
   neutral: "bg-muted", primary: "bg-primary", success: "bg-success", warning: "bg-warning", danger: "bg-danger", info: "bg-info",
-  accent: "bg-accent", violet: "bg-violet", teal: "bg-teal",
+  accent: "bg-accent", violet: "bg-violet", teal: "bg-teal", brand: "bg-brand",
+};
+const STROKE: Record<Tone, string> = {
+  neutral: "var(--muted)", primary: "var(--primary)", success: "var(--success)", warning: "var(--warning)", danger: "var(--danger)", info: "var(--info)",
+  accent: "var(--accent)", violet: "var(--violet)", teal: "var(--teal)", brand: "var(--brand)",
 };
 
 export function Badge({ tone = "neutral", children, className, dot }: { tone?: Tone; children: React.ReactNode; className?: string; dot?: boolean }) {
@@ -277,7 +282,7 @@ export function Modal({ open, onClose, title, children, footer, width = "max-w-l
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[10vh]" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-navy/50" onClick={onClose} aria-hidden />
-      <div className={cx("relative w-full rounded-lg border border-line bg-surface shadow-pop", width)}>
+      <div className={cx("relative w-full rounded-2xl border border-line bg-surface shadow-pop", width)}>
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="text-sm font-semibold">{title}</h2>
           <button onClick={onClose} className="rounded p-1 text-muted hover:bg-surface-3" aria-label="Close">
@@ -296,24 +301,57 @@ export function Kbd({ children }: { children: React.ReactNode }) {
 }
 
 // ------------------------------------------------------------------ data
-/** KPI tile: label, coloured icon tile, big value, optional progress bar (0–1) and a sub-line. */
-export function Stat({ label, value, sub, tone, icon, href, bar }: {
+/** Small area sparkline (no axes) for KPI tiles; values are drawn left to right, last point marked. */
+export function Sparkline({ values, tone = "primary", className, label }: { values: number[]; tone?: Tone; className?: string; label?: string }) {
+  if (values.length < 2) return null;
+  const w = 120, h = 48, pad = 4;
+  const max = Math.max(...values), min = Math.min(...values);
+  const span = max - min || 1;
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * w, pad + (1 - (v - min) / span) * (h - pad * 2)] as const);
+  const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const id = `spark-${tone}`;
+  const [lx, ly] = pts[pts.length - 1];
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className={cx("h-12 w-28 overflow-visible", className)} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+      {label && <title>{label}</title>}
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={STROKE[tone]} stopOpacity="0.28" />
+          <stop offset="100%" stopColor={STROKE[tone]} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${line} L${w},${h} L0,${h} Z`} fill={`url(#${id})`} />
+      <path d={line} fill="none" stroke={STROKE[tone]} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={lx} cy={ly} r="3.5" fill={STROKE[tone]} stroke="var(--surface)" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+/** KPI tile in the Lakshmi style: icon circle and label, big value, sub-line, and either a sparkline or a progress bar (0–1). */
+export function Stat({ label, value, sub, tone, icon, href, bar, spark, sparkLabel, tint }: {
   label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: Tone; icon?: React.ReactNode; href?: string; bar?: number;
+  spark?: number[]; sparkLabel?: string; tint?: boolean;
 }) {
   const t = tone ?? "neutral";
   const body = (
-    <Card className={cx("flex h-full flex-col gap-3 p-5", href && "transition-colors hover:border-line-strong")}>
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-[13px] font-semibold text-muted">{label}</span>
-        {icon && <span className={cx("grid size-11 shrink-0 place-items-center rounded-xl", TONE[t])}>{icon}</span>}
+    <Card className={cx("relative flex h-full flex-col gap-3 overflow-hidden p-5", tint && "bg-gradient-to-br from-brand-soft/70 to-surface",
+                        href && "transition-shadow hover:shadow-pop")}>
+      <div className="flex items-center gap-3">
+        {icon && <span className={cx("grid size-12 shrink-0 place-items-center rounded-full", TONE[t])}>{icon}</span>}
+        <span className="text-sm font-semibold text-ink-2">{label}</span>
       </div>
-      <div className="tabular text-3xl font-extrabold tracking-tight text-ink">{value}</div>
-      {bar != null && (
-        <div className={cx("h-1 rounded-full", TONE[t].split(" ")[0])} aria-hidden>
-          <div className={cx("h-1 rounded-full", BAR[t])} style={{ width: `${Math.round(Math.min(1, Math.max(0, bar)) * 100)}%` }} />
+      <div className="flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <div className="tabular text-3xl font-extrabold tracking-tight text-ink">{value}</div>
+          {sub && <div className="mt-1.5 text-xs text-muted">{sub}</div>}
+        </div>
+        {spark && <Sparkline values={spark} tone={t} label={sparkLabel} className="shrink-0" />}
+      </div>
+      {!spark && bar != null && (
+        <div className={cx("h-1.5 rounded-full", TONE[t].split(" ")[0])} aria-hidden>
+          <div className={cx("h-1.5 rounded-full", BAR[t])} style={{ width: `${Math.round(Math.min(1, Math.max(0, bar)) * 100)}%` }} />
         </div>
       )}
-      {sub && <div className="text-xs text-muted">{sub}</div>}
     </Card>
   );
   return href ? <a href={href} className="block focus-visible:rounded-2xl">{body}</a> : body;

@@ -48,17 +48,24 @@ function Login() {
     }
   }
 
-  const field = "flex h-[52px] items-center gap-2.5 rounded-xl border border-line-strong bg-surface px-3.5 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15";
+  const field = "flex h-[52px] items-center gap-2.5 rounded-xl border border-line-strong bg-surface px-3.5 shadow-card focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15";
 
   return (
-    <div className="grid min-h-screen bg-bg lg:grid-cols-2">
-      <section className="relative hidden flex-col justify-between gap-12 overflow-hidden bg-navy px-16 py-14 text-white lg:flex">
+    <div className="app-backdrop grid min-h-screen lg:grid-cols-2">
+      <section className="relative hidden flex-col justify-between gap-12 overflow-hidden bg-gradient-to-br from-primary via-[#1a3f9e] to-navy px-16 py-14 text-white lg:flex">
         <svg className="pointer-events-none absolute -bottom-32 -right-36 size-[560px]" viewBox="0 0 560 560" fill="none" stroke="#fff" strokeOpacity="0.07" strokeWidth="2" aria-hidden>
           {[270, 220, 170, 120, 70].map((r) => <circle key={r} cx="280" cy="280" r={r} />)}
           <path d="M10 280h540M280 10v540M89 89l382 382M471 89L89 471" />
         </svg>
-        <div className="relative flex items-center gap-3.5">
-          <div className="grid size-13 place-items-center rounded-2xl bg-white text-lg font-extrabold tracking-wide text-navy" style={{ width: 52, height: 52 }}>LCC</div>
+        <svg viewBox="0 0 600 160" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-0 h-40 w-full" aria-hidden>
+          <path d="M0 110 C 160 60, 360 90, 600 20 L600 160 L0 160 Z" fill="var(--brand)" opacity="0.9" />
+          <path d="M0 135 C 180 95, 380 120, 600 70 L600 160 L0 160 Z" fill="#ffffff" opacity="0.12" />
+        </svg>
+        <div className="relative flex items-center gap-4">
+          <div className="rounded-2xl bg-white px-3 py-2 shadow-pop">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/lakshmi-logo.png" alt="Lakshmi" className="h-12 w-auto" />
+          </div>
           <div>
             <p className="text-xl font-extrabold">Lakshmi ERP</p>
             <p className="text-[13px] text-navy-text">Lakshmi Card Clothing Mfg. Co. · Unit 4</p>
@@ -81,11 +88,12 @@ function Login() {
       <section className="flex items-center justify-center px-6 py-12 sm:px-8">
         <form onSubmit={submit} className="w-full max-w-[420px] space-y-5">
           <div className="mb-2 flex items-center gap-3 lg:hidden">
-            <div className="grid size-11 place-items-center rounded-xl bg-navy text-sm font-extrabold text-white">LCC</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/lakshmi-logo.png" alt="Lakshmi" className="h-11 w-auto rounded-lg dark:bg-white dark:p-1" />
             <div><p className="font-extrabold text-navy dark:text-white">Lakshmi ERP</p><p className="text-xs text-muted">Card Clothing · Unit 4</p></div>
           </div>
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight">Sign in</h2>
+            <h2 className="border-l-4 border-brand pl-3 text-3xl font-extrabold tracking-tight">Sign in</h2>
             <p className="mt-2 text-[15px] text-muted">Use your ERP account to continue.</p>
           </div>
           {error && <Alert>{error}</Alert>}
@@ -109,7 +117,7 @@ function Login() {
               </button>
             </span>
           </label>
-          <Button type="submit" loading={busy} className="h-[52px] w-full rounded-xl text-base font-bold" size="lg">
+          <Button type="submit" loading={busy} className="h-[52px] w-full text-base font-bold" size="lg">
             Sign in {!busy && <ArrowRight className="size-[18px]" aria-hidden />}
           </Button>
           <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3.5">
